@@ -13,6 +13,10 @@ src_libwolftpm_la_SOURCES      = \
                                 src/tpm2_param_enc.c \
                                 src/tpm2_cryptocb.c
 
+if NOT_BUILD_CERT_178
+src_libwolftpm_la_SOURCES      += src/tpm2_param_enc.c
+endif
+
 if BUILD_DEVTPM
 src_libwolftpm_la_SOURCES      += src/tpm2_linux.c
 endif

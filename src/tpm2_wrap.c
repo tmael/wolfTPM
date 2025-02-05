@@ -32,16 +32,19 @@
 #include <wolftpm/tpm2_packet.h>
 #include <hal/tpm_io.h> /* for default IO callback */
 
+
 /* Local Functions */
 static int wolfTPM2_GetCapabilities_NoDev(WOLFTPM2_CAPS* cap);
 static void wolfTPM2_CopySymmetric(TPMT_SYM_DEF* out, const TPMT_SYM_DEF* in);
 static void wolfTPM2_CopyName(TPM2B_NAME* out, const TPM2B_NAME* in);
 static void wolfTPM2_CopyAuth(TPM2B_AUTH* out, const TPM2B_AUTH* in);
+#ifndef HAVE_DO178
 static void wolfTPM2_CopyPubT(TPMT_PUBLIC* out, const TPMT_PUBLIC* in);
-static void wolfTPM2_CopyPub(TPM2B_PUBLIC* out, const TPM2B_PUBLIC* in);
 static void wolfTPM2_CopyPriv(TPM2B_PRIVATE* out, const TPM2B_PRIVATE* in);
 static void wolfTPM2_CopyEccParam(TPM2B_ECC_PARAMETER* out, const TPM2B_ECC_PARAMETER* in);
 static void wolfTPM2_CopyKeyFromBlob(WOLFTPM2_KEY* key, const WOLFTPM2_KEYBLOB* keyBlob);
+#endif /* !HAVE_DO178 */
+static void wolfTPM2_CopyPub(TPM2B_PUBLIC* out, const TPM2B_PUBLIC* in);
 static void wolfTPM2_CopyNvPublic(TPMS_NV_PUBLIC* out, const TPMS_NV_PUBLIC* in);
 
 /******************************************************************************/
@@ -55,9 +58,11 @@ static int wolfTPM2_Init_ex(TPM2_CTX* ctx, TPM2HalIoCb ioCb, void* userCtx,
 
 #if !defined(WOLFTPM_LINUX_DEV) && !defined(WOLFTPM_WINAPI)
     Startup_In startupIn;
+#ifndef HAVE_DO178
 #if defined(WOLFTPM_MICROCHIP) || defined(WOLFTPM_PERFORM_SELFTEST)
     SelfTest_In selfTest;
 #endif
+#endif /* !HAVE_DO178 */
 #endif /* ! WOLFTPM_LINUX_DEV */
 
     if (ctx == NULL)
@@ -104,6 +109,7 @@ static int wolfTPM2_Init_ex(TPM2_CTX* ctx, TPM2HalIoCb ioCb, void* userCtx,
 #endif
     rc = TPM_RC_SUCCESS;
 
+#ifndef HAVE_DO178
 #if defined(WOLFTPM_MICROCHIP) || defined(WOLFTPM_PERFORM_SELFTEST)
     /* Do full self-test (Chips such as ATTPM20 require this before some operations) */
     XMEMSET(&selfTest, 0, sizeof(selfTest));
@@ -119,6 +125,7 @@ static int wolfTPM2_Init_ex(TPM2_CTX* ctx, TPM2HalIoCb ioCb, void* userCtx,
     printf("TPM2_SelfTest pass\n");
 #endif
 #endif /* WOLFTPM_MICROCHIP || WOLFTPM_PERFORM_SELFTEST */
+#endif /* !HAVE_DO178 */
 #endif /* !WOLFTPM_LINUX_DEV && !WOLFTPM_WINAPI */
 
     return rc;
@@ -174,7 +181,7 @@ int wolfTPM2_Init(WOLFTPM2_DEV* dev, TPM2HalIoCb ioCb, void* userCtx)
 
     return rc;
 }
-
+#ifndef HAVE_DO178
 #ifndef WOLFTPM2_NO_HEAP
 WOLFTPM2_DEV* wolfTPM2_New(void)
 {
@@ -292,6 +299,7 @@ int wolfTPM2_FreeCSR(WOLFTPM2_CSR* csr)
 #endif /* WOLFTPM2_CERT_GEN */
 
 #endif /* !WOLFTPM2_NO_HEAP */
+
 
 WOLFTPM2_HANDLE* wolfTPM2_GetHandleRefFromKey(WOLFTPM2_KEY* key)
 {
@@ -629,7 +637,7 @@ int wolfTPM2_SelfTest(WOLFTPM2_DEV* dev)
     #define TPM_PT_VENDOR_FIX_FU_OPERATION_MODE (TPM_PT_VENDOR_FIX + 7)
     #define TPM_PT_VENDOR_FIX_FU_KEYGROUP_ID    (TPM_PT_VENDOR_FIX + 8)
 #endif
-
+#endif /* !HAVE_DO178 */
 /* ST33TP
  *  TPM_PT_MANUFACTURER 0x53544D20: "STM"
  *  TPM_PT_FIRMWARE_VERSION_1 TPM FW version: 0x00006400
@@ -709,6 +717,7 @@ static int wolfTPM2_ParseCapabilities(WOLFTPM2_CAPS* caps,
     return rc;
 }
 
+#ifndef HAVE_DO178
 #if defined(WOLFTPM_SLB9672) || defined(WOLFTPM_SLB9673)
 static int tpm2_ifx_cap_vendor_get(WOLFTPM2_CAPS* cap, uint32_t property,
     uint8_t* val, size_t valSz)
@@ -746,6 +755,7 @@ static int tpm2_ifx_cap_vendor_get(WOLFTPM2_CAPS* cap, uint32_t property,
     return rc;
 }
 #endif
+#endif /* !HAVE_DO178 */
 
 static int wolfTPM2_GetCapabilities_NoDev(WOLFTPM2_CAPS* cap)
 {
@@ -793,6 +803,7 @@ static int wolfTPM2_GetCapabilities_NoDev(WOLFTPM2_CAPS* cap)
     }
     rc = wolfTPM2_ParseCapabilities(cap, &out.capabilityData.data.tpmProperties);
 
+#ifndef HAVE_DO178
 #if defined(WOLFTPM_SLB9672) || defined(WOLFTPM_SLB9673)
     /* Get vendor specific information */
     if (rc == 0) {
@@ -819,7 +830,7 @@ static int wolfTPM2_GetCapabilities_NoDev(WOLFTPM2_CAPS* cap)
         }
     }
 #endif
-
+#endif /* !HAVE_DO178 */
     return rc;
 }
 
@@ -966,6 +977,7 @@ int wolfTPM2_SetAuthHandle(WOLFTPM2_DEV* dev, int index,
         if (handle->policyAuth) {
             TPM2_AUTH_SESSION* session = &dev->session[index];
             int authDigestSz = TPM2_GetHashDigestSize(session->authHash);
+#ifndef HAVE_DO178
         #ifdef WOLFTPM_DEBUG_VERBOSE
             printf("Session %d: Edit (PolicyAuth)\n", index);
             printf("\tHandle 0x%x (not touching)\n", session->sessionHandle);
@@ -979,6 +991,7 @@ int wolfTPM2_SetAuthHandle(WOLFTPM2_DEV* dev, int index,
             TPM2_PrintBin(session->name.name, session->name.size);
             TPM2_PrintBin(handle->name.name, handle->name.size);
         #endif
+#endif /* !HAVE_DO178 */
             session->policyAuth = handle->policyAuth;
             if ((word32)handle->auth.size + authDigestSz >
                     sizeof(session->auth.buffer)) {
@@ -1037,7 +1050,7 @@ int wolfTPM2_SetAuthHandleName(WOLFTPM2_DEV* dev, int index,
 
     return TPM_RC_SUCCESS;
 }
-
+#ifndef HAVE_DO178
 int wolfTPM2_SetAuthSession(WOLFTPM2_DEV* dev, int index,
     WOLFTPM2_SESSION* tpmSession, TPMA_SESSION sessionAttributes)
 {
@@ -1081,6 +1094,7 @@ int wolfTPM2_SetAuthSession(WOLFTPM2_DEV* dev, int index,
     }
     return rc;
 }
+#endif /* !HAVE_DO178 */
 
 int wolfTPM2_SetSessionHandle(WOLFTPM2_DEV* dev, int index,
     WOLFTPM2_SESSION* tpmSession)
@@ -1113,6 +1127,7 @@ int wolfTPM2_SetSessionHandle(WOLFTPM2_DEV* dev, int index,
     return TPM_RC_SUCCESS;
 }
 
+#ifndef HAVE_DO178
 
 int wolfTPM2_CreateAuthSession_EkPolicy(WOLFTPM2_DEV* dev,
                                         WOLFTPM2_SESSION* tpmSession)
@@ -1142,6 +1157,7 @@ int wolfTPM2_CreateAuthSession_EkPolicy(WOLFTPM2_DEV* dev,
     }
     return rc;
 }
+#endif /* !HAVE_DO178 */
 
 int wolfTPM2_Cleanup_ex(WOLFTPM2_DEV* dev, int doShutdown)
 {
@@ -1186,6 +1202,7 @@ int wolfTPM2_Cleanup(WOLFTPM2_DEV* dev)
 #endif
 }
 
+#ifndef HAVE_DO178
 #if !defined(WOLFTPM2_NO_WOLFCRYPT) && defined(HAVE_ECC) && \
     !defined(WC_NO_RNG) && defined(WOLFSSL_PUBLIC_MP)
 /* The KDF for producing a symmetric key.
@@ -1487,6 +1504,7 @@ static int wolfTPM2_EncryptSecret_RSA(WOLFTPM2_DEV* dev, const WOLFTPM2_KEY* tpm
 }
 #endif /* !WOLFTPM2_NO_WOLFCRYPT && !NO_RSA && !WC_NO_RNG */
 
+
 int wolfTPM2_EncryptSecret(WOLFTPM2_DEV* dev, const WOLFTPM2_KEY* tpmKey,
     TPM2B_DATA *data, TPM2B_ENCRYPTED_SECRET *secret,
     const char* label)
@@ -1525,7 +1543,6 @@ int wolfTPM2_EncryptSecret(WOLFTPM2_DEV* dev, const WOLFTPM2_KEY* tpmKey,
     TPM2_PrintBin(data->buffer, data->size);
 #endif
 #endif /* !WOLFTPM2_NO_WOLFCRYPT */
-
     (void)label;
 
     return rc;
@@ -1691,7 +1708,7 @@ int wolfTPM2_StartSession(WOLFTPM2_DEV* dev, WOLFTPM2_SESSION* session,
 
     return rc;
 }
-
+#endif /* !HAVE_DO178 */
 
 int wolfTPM2_CreatePrimaryKey_ex(WOLFTPM2_DEV* dev, WOLFTPM2_PKEY* pkey,
     TPM_HANDLE primaryHandle, TPMT_PUBLIC* publicTemplate,
@@ -1780,6 +1797,7 @@ int wolfTPM2_CreatePrimaryKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
     return rc;
 }
 
+#ifndef HAVE_DO178
 int wolfTPM2_ChangeAuthKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
     WOLFTPM2_HANDLE* parent, const byte* auth, int authSz)
 {
@@ -1903,6 +1921,7 @@ int wolfTPM2_CreateKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEYBLOB* keyBlob,
     return rc;
 }
 
+
 int wolfTPM2_LoadKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEYBLOB* keyBlob,
     WOLFTPM2_HANDLE* parent)
 {
@@ -2013,7 +2032,7 @@ int wolfTPM2_CreateLoadedKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEYBLOB* keyBlob,
 
     return rc;
 }
-
+#endif /* !HAVE_DO178 */
 int wolfTPM2_LoadPublicKey_ex(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
     const TPM2B_PUBLIC* pub, TPM_HANDLE hierarchy)
 {
@@ -2054,6 +2073,7 @@ int wolfTPM2_LoadPublicKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
     return wolfTPM2_LoadPublicKey_ex(dev, key, pub, TPM_RH_OWNER);
 }
 
+#ifndef HAVE_DO178
 int wolfTPM2_ComputeName(const TPM2B_PUBLIC* pub, TPM2B_NAME* out)
 {
     int rc;
@@ -2780,7 +2800,9 @@ int wolfTPM2_ReadPublicKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
 
     return rc;
 }
+#endif /* !HAVE_DO178 */
 
+#ifndef HAVE_DO178
 #ifndef WOLFTPM2_NO_WOLFCRYPT
 #ifndef NO_ASN
 #ifndef NO_RSA
@@ -3623,8 +3645,9 @@ int wolfTPM2_EccKey_WolfToPubPoint(WOLFTPM2_DEV* dev, ecc_key* wolfKey,
 #endif /* HAVE_ECC_KEY_EXPORT */
 #endif /* HAVE_ECC */
 #endif /* !WOLFTPM2_NO_WOLFCRYPT */
+#endif /* !HAVE_DO178 */
 
-
+#ifndef HAVE_DO178
 /* primaryHandle must be owner or platform hierarchy */
 /* Owner    Persistent Handle Range: 0x81000000 to 0x817FFFFF */
 /* Platform Persistent Handle Range: 0x81800000 to 0x81FFFFFF */
@@ -3672,7 +3695,6 @@ int wolfTPM2_NVStoreKey(WOLFTPM2_DEV* dev, TPM_HANDLE primaryHandle,
             rc = TPM_RC_COMMAND_CODE;
         }
     #endif
-
     #ifdef DEBUG_WOLFTPM
         printf("TPM2_EvictControl failed %d: %s\n", rc,
             wolfTPM2_GetRCString(rc));
@@ -3972,6 +3994,7 @@ int wolfTPM2_VerifyHash(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
         TPM_ALG_NULL, WOLFTPM2_WRAP_DIGEST, NULL);
 }
 
+
 /* Generate ECC key-pair with NULL hierarchy and load (populates handle) */
 int wolfTPM2_ECDHGenKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* ecdhKey, int curve_id,
     const byte* auth, int authSz)
@@ -4184,7 +4207,7 @@ int wolfTPM2_ECDHEGenZ(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* parentKey,
 
     return rc;
 }
-
+#endif /* !HAVE_DO178 */
 
 int wolfTPM2_RsaEncrypt(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
     TPM_ALG_ID padScheme, const byte* msg, int msgSz, byte* out, int* outSz)
@@ -4406,6 +4429,7 @@ int wolfTPM2_UnloadHandle(WOLFTPM2_DEV* dev, WOLFTPM2_HANDLE* handle)
     return TPM_RC_SUCCESS;
 }
 
+#ifndef HAVE_DO178
 /* nv is the populated handle and auth */
 /* auth and authSz are optional NV authentication */
 /* authPolicy and authPolicySz are optional policy digest */
@@ -4482,6 +4506,7 @@ int wolfTPM2_NVCreateAuthPolicy(WOLFTPM2_DEV* dev, WOLFTPM2_HANDLE* parent,
     return (rc == TPM_RC_SUCCESS && alreadyExists) ? TPM_RC_NV_DEFINED : rc;
 }
 
+
 int wolfTPM2_NVCreateAuth(WOLFTPM2_DEV* dev, WOLFTPM2_HANDLE* parent,
     WOLFTPM2_NV* nv, word32 nvIndex, word32 nvAttributes, word32 maxSize,
     const byte* auth, int authSz)
@@ -4489,6 +4514,7 @@ int wolfTPM2_NVCreateAuth(WOLFTPM2_DEV* dev, WOLFTPM2_HANDLE* parent,
     return wolfTPM2_NVCreateAuthPolicy(dev, parent, nv, nvIndex, nvAttributes,
         maxSize, auth, authSz, NULL, 0);
 }
+
 
 /* older API kept for compatibility, recommend using wolfTPM2_NVCreateAuth */
 int wolfTPM2_NVCreate(WOLFTPM2_DEV* dev, TPM_HANDLE authHandle,
@@ -4504,6 +4530,7 @@ int wolfTPM2_NVCreate(WOLFTPM2_DEV* dev, TPM_HANDLE authHandle,
     return wolfTPM2_NVCreateAuth(dev, &parent, &nv, nvIndex, nvAttributes,
         maxSize, auth, authSz);
 }
+
 
 static int wolfTPM2_NVWriteData(WOLFTPM2_DEV* dev, WOLFTPM2_SESSION* tpmSession,
     TPM_ALG_ID pcrAlg, byte* pcrArray, word32 pcrArraySz, WOLFTPM2_NV* nv,
@@ -4630,7 +4657,7 @@ int wolfTPM2_NVWrite(WOLFTPM2_DEV* dev, TPM_HANDLE authHandle,
     (void)authHandle;
     return wolfTPM2_NVWriteAuth(dev, &nv, nvIndex, dataBuf, dataSz, offset);
 }
-
+#endif /* !HAVE_DO178 */
 int wolfTPM2_NVReadAuthPolicy(WOLFTPM2_DEV* dev, WOLFTPM2_SESSION* tpmSession,
     TPM_ALG_ID pcrAlg, byte* pcrArray, word32 pcrArraySz, WOLFTPM2_NV* nv,
     word32 nvIndex, byte* dataBuf, word32* pDataSz, word32 offset)
@@ -4730,6 +4757,7 @@ int wolfTPM2_NVReadAuth(WOLFTPM2_DEV* dev, WOLFTPM2_NV* nv,
         nv, nvIndex, dataBuf, pDataSz, offset);
 }
 
+#ifndef HAVE_DO178
 int wolfTPM2_NVReadCert(WOLFTPM2_DEV* dev, TPM_HANDLE handle,
     uint8_t* buffer, uint32_t* len)
 {
@@ -4773,7 +4801,7 @@ int wolfTPM2_NVReadCert(WOLFTPM2_DEV* dev, TPM_HANDLE handle,
 
     return rc;
 }
-
+#endif /* !HAVE_DO178 */
 /* older API kept for compatibility, recommend using wolfTPM2_NVReadAuth */
 int wolfTPM2_NVRead(WOLFTPM2_DEV* dev, TPM_HANDLE authHandle,
     word32 nvIndex, byte* dataBuf, word32* pDataSz, word32 offset)
@@ -4811,7 +4839,7 @@ int wolfTPM2_NVOpen(WOLFTPM2_DEV* dev, WOLFTPM2_NV* nv, word32 nvIndex,
     #endif
         return rc;
     }
-
+#ifndef HAVE_DO178
     /* Compute NV Index name in case of parameter encryption */
 #ifndef WOLFTPM2_NO_WOLFCRYPT
     rc = TPM2_HashNvPublic(&nvPublic, (byte*)&nv->handle.name.name,
@@ -4820,6 +4848,7 @@ int wolfTPM2_NVOpen(WOLFTPM2_DEV* dev, WOLFTPM2_NV* nv, word32 nvIndex,
         return rc;
     }
 #endif
+#endif /* !HAVE_DO178 */
 
     /* flag that the NV was "opened" and name was loaded */
     nv->handle.nameLoaded = 1;
@@ -4868,7 +4897,7 @@ int wolfTPM2_NVReadPublic(WOLFTPM2_DEV* dev, word32 nvIndex,
 
     return rc;
 }
-
+#ifndef HAVE_DO178
 int wolfTPM2_NVIncrement(WOLFTPM2_DEV* dev, WOLFTPM2_NV* nv)
 {
     int rc = TPM_RC_SUCCESS;
@@ -4994,7 +5023,9 @@ int wolfTPM2_NVDelete(WOLFTPM2_DEV* dev, TPM_HANDLE authHandle,
     parent.hndl = authHandle;
     return wolfTPM2_NVDeleteAuth(dev, &parent, nvIndex);
 }
+#endif /* !HAVE_DO178 */
 
+#ifndef HAVE_DO178
 #ifndef WOLFTPM2_NO_WOLFCRYPT
 struct WC_RNG* wolfTPM2_GetRng(WOLFTPM2_DEV* dev)
 {
@@ -5007,6 +5038,7 @@ struct WC_RNG* wolfTPM2_GetRng(WOLFTPM2_DEV* dev)
     return rng;
 }
 #endif
+
 
 int wolfTPM2_GetRandom(WOLFTPM2_DEV* dev, byte* buf, word32 len)
 {
@@ -5076,7 +5108,7 @@ int wolfTPM2_Clear(WOLFTPM2_DEV* dev)
 
     return rc;
 }
-
+#endif /* !HAVE_DO178 */
 /* Hashing */
 /* usageAuth: Optional auth for handle */
 int wolfTPM2_HashStart(WOLFTPM2_DEV* dev, WOLFTPM2_HASH* hash,
@@ -5210,7 +5242,7 @@ int wolfTPM2_HashFinish(WOLFTPM2_DEV* dev, WOLFTPM2_HASH* hash,
     return rc;
 }
 
-
+#ifndef HAVE_DO178
 static int wolfTPM2_ComputeSymmetricUnique(WOLFTPM2_DEV* dev, int hashAlg,
     const TPMT_SENSITIVE* sensitive, TPM2B_DIGEST* unique)
 {
@@ -5465,8 +5497,6 @@ int wolfTPM2_EncryptDecrypt(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
 
     return rc;
 }
-
-
 int wolfTPM2_SetCommand(WOLFTPM2_DEV* dev, TPM_CC commandCode, int enableFlag)
 {
     int rc = TPM_RC_COMMAND_CODE; /* not supported */
@@ -5713,6 +5743,7 @@ int wolfTPM2_Shutdown(WOLFTPM2_DEV* dev, int doStartup)
 
     return rc;
 }
+#endif /* !HAVE_DO178 */
 
 int wolfTPM2_UnloadHandles(WOLFTPM2_DEV* dev, word32 handleStart,
     word32 handleCount)
@@ -5734,6 +5765,7 @@ int wolfTPM2_UnloadHandles(WOLFTPM2_DEV* dev, word32 handleStart,
     return rc;
 }
 
+#ifndef HAVE_DO178
 int wolfTPM2_UnloadHandles_AllTransient(WOLFTPM2_DEV* dev)
 {
     return wolfTPM2_UnloadHandles(dev, TRANSIENT_FIRST, MAX_HANDLE_NUM);
@@ -5787,7 +5819,7 @@ int wolfTPM2_ChangePlatformAuth(WOLFTPM2_DEV* dev, WOLFTPM2_SESSION* session)
     TPM2_ForceZero(in.newAuth.buffer, in.newAuth.size);
     return rc;
 }
-
+#endif /* !HAVE_DO178 */
 /******************************************************************************/
 /* --- END Wrapper Device Functions-- */
 /******************************************************************************/
@@ -5827,7 +5859,7 @@ int GetKeyTemplateRSA(TPMT_PUBLIC* publicTemplate,
 
     return TPM_RC_SUCCESS;
 }
-
+#ifndef HAVE_DO178
 int GetKeyTemplateECC(TPMT_PUBLIC* publicTemplate,
     TPM_ALG_ID nameAlg, TPMA_OBJECT objectAttributes, TPM_ECC_CURVE curve,
     TPM_ALG_ID sigScheme, TPM_ALG_ID sigHash)
@@ -5963,11 +5995,16 @@ int wolfTPM2_GetKeyTemplate_KeySeal(TPMT_PUBLIC* publicTemplate, TPM_ALG_ID name
     publicTemplate->parameters.keyedHashDetail.scheme.scheme = TPM_ALG_NULL;
     return TPM_RC_SUCCESS;
 }
+#endif /* !HAVE_DO178 */
 
 int wolfTPM2_GetKeyTemplate_EK(TPMT_PUBLIC* publicTemplate, TPM_ALG_ID alg,
     int keyBits, TPM_ECC_CURVE curveID, TPM_ALG_ID nameAlg, int highRange)
 {
     int rc;
+#ifdef HAVE_DO178
+    (void)nameAlg;
+    (void)curveID;
+#endif /* HAVE_DO178 */
     TPMA_OBJECT objectAttributes = (
         TPMA_OBJECT_fixedTPM | TPMA_OBJECT_fixedParent |
         TPMA_OBJECT_sensitiveDataOrigin | TPMA_OBJECT_adminWithPolicy |
@@ -5984,6 +6021,7 @@ int wolfTPM2_GetKeyTemplate_EK(TPMT_PUBLIC* publicTemplate, TPM_ALG_ID alg,
             publicTemplate->unique.rsa.size = 0;
         }
     }
+#ifndef HAVE_DO178
     else if (alg == TPM_ALG_ECC) {
         rc = GetKeyTemplateECC(publicTemplate, nameAlg,
             objectAttributes, curveID, TPM_ALG_NULL, TPM_ALG_NULL);
@@ -5993,6 +6031,7 @@ int wolfTPM2_GetKeyTemplate_EK(TPMT_PUBLIC* publicTemplate, TPM_ALG_ID alg,
         }
 
     }
+#endif /* !HAVE_DO178 */
     else {
         rc = BAD_FUNC_ARG; /* not supported */
     }
@@ -6102,6 +6141,7 @@ int wolfTPM2_GetKeyTemplate_EKIndex(word32 nvIndex,
             nameAlg, highRange);
 }
 
+#ifndef HAVE_DO178
 int wolfTPM2_GetKeyTemplate_RSA_EK(TPMT_PUBLIC* publicTemplate)
 {
     return wolfTPM2_GetKeyTemplate_EK(publicTemplate, TPM_ALG_RSA, 2048,
@@ -6639,6 +6679,7 @@ int wolfTPM2_GetTime(WOLFTPM2_KEY* aikKey, GetTime_Out* getTimeOut)
 
     return rc;
 }
+#endif /* !HAVE_DO178 */
 
 static void wolfTPM2_CopySymmetric(TPMT_SYM_DEF* out, const TPMT_SYM_DEF* in)
 {
@@ -6762,6 +6803,7 @@ static void wolfTPM2_CopyPubT(TPMT_PUBLIC* out, const TPMT_PUBLIC* in)
                 out->unique.rsa.size);
         break;
     case TPM_ALG_ECC:
+#ifndef HAVE_DO178
         wolfTPM2_CopySymmetric(&out->parameters.eccDetail.symmetric,
             &in->parameters.eccDetail.symmetric);
         out->parameters.eccDetail.scheme.scheme =
@@ -6778,6 +6820,7 @@ static void wolfTPM2_CopyPubT(TPMT_PUBLIC* out, const TPMT_PUBLIC* in)
             &in->unique.ecc.x);
         wolfTPM2_CopyEccParam(&out->unique.ecc.y,
             &in->unique.ecc.y);
+#endif /* !HAVE_DO178 */
         break;
     default:
         wolfTPM2_CopySymmetric(&out->parameters.asymDetail.symmetric,
@@ -6798,6 +6841,7 @@ static void wolfTPM2_CopyPub(TPM2B_PUBLIC* out, const TPM2B_PUBLIC* in)
     }
 }
 
+#ifndef HAVE_DO178
 static void wolfTPM2_CopyPriv(TPM2B_PRIVATE* out, const TPM2B_PRIVATE* in)
 {
     if (out != NULL && in != NULL) {
@@ -6829,6 +6873,7 @@ static void wolfTPM2_CopyKeyFromBlob(WOLFTPM2_KEY* key, const WOLFTPM2_KEYBLOB* 
         wolfTPM2_CopyPub(&key->pub, &keyBlob->pub);
     }
 }
+#endif /* !HAVE_DO178 */
 
 static void wolfTPM2_CopyNvPublic(TPMS_NV_PUBLIC* out, const TPMS_NV_PUBLIC* in)
 {
@@ -6846,11 +6891,10 @@ static void wolfTPM2_CopyNvPublic(TPMS_NV_PUBLIC* out, const TPMS_NV_PUBLIC* in)
         out->nvIndex = in->nvIndex;
     }
 }
-
+#ifndef HAVE_DO178
 /******************************************************************************/
 /* --- END Utility Functions -- */
 /******************************************************************************/
-
 
 /******************************************************************************/
 /* --- BEGIN Certificate Signing Request (CSR) Functions -- */
@@ -7243,9 +7287,9 @@ int wolfTPM2_CSR_Generate(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
 /******************************************************************************/
 /* --- END Certificate Signing Request (CSR) Functions -- */
 /******************************************************************************/
+#endif /* !HAVE_DO178 */
 
-
-
+#ifndef HAVE_DO178
 /******************************************************************************/
 /* --- BEGIN Policy Support -- */
 /******************************************************************************/
@@ -7301,6 +7345,7 @@ int wolfTPM2_GetPolicyDigest(WOLFTPM2_DEV* dev, TPM_HANDLE sessionHandle,
 
     return rc;
 }
+#endif /* !HAVE_DO178 */
 
 int wolfTPM2_PolicyPCR(WOLFTPM2_DEV* dev, TPM_HANDLE sessionHandle,
     TPM_ALG_ID pcrAlg, byte* pcrArray, word32 pcrArraySz)
@@ -7322,6 +7367,7 @@ int wolfTPM2_PolicyPCR(WOLFTPM2_DEV* dev, TPM_HANDLE sessionHandle,
     return rc;
 }
 
+#ifndef HAVE_DO178
 /* Use this password (in clear) for the policy session instead of the HMAC */
 int wolfTPM2_PolicyPassword(WOLFTPM2_DEV* dev, WOLFTPM2_SESSION* tpmSession,
     const byte* auth, int authSz)
@@ -7645,7 +7691,6 @@ int wolfTPM2_PolicyAuthorizeMake(TPM_ALG_ID pcrAlg,
 /* --- END Policy Support -- */
 /******************************************************************************/
 
-
 /******************************************************************************/
 /* --- BEGIN Provisioned TPM Support -- */
 /******************************************************************************/
@@ -7722,7 +7767,6 @@ int wolfTPM2_SetIdentityAuth(WOLFTPM2_DEV* dev, WOLFTPM2_HANDLE* handle,
 /******************************************************************************/
 /* --- END Provisioned TPM Support -- */
 /******************************************************************************/
-
 
 
 
@@ -8063,5 +8107,5 @@ int wolfTPM2_FirmwareUpgradeCancel(WOLFTPM2_DEV* dev)
 /******************************************************************************/
 /* --- END Firmware Upgrade Support -- */
 /******************************************************************************/
-
+#endif /* !HAVE_DO178 */
 #endif /* !WOLFTPM2_NO_WRAPPER */

@@ -3704,9 +3704,72 @@ WOLFTPM_API UINT16 TPM2_GetVendorID(void);
 WOLFTPM_LOCAL void TPM2_ForceZero(void* mem, word32 len);
 
 
+#ifdef DEBUG_WOLFTPM
+/*!
+    \ingroup TPM2_Proprietary
+    \brief Helper function to print a binary buffer in a formatted way
+    \note Requires DEBUG_WOLFTPM to be defined
+
+    \param buffer pointer to a buffer of BYTE type
+    \param length integer value of word32 type, containing the size of the buffer
+
+    _Example_
+    \code
+    BYTE buffer[] = {0x01,0x02,0x03,0x04};
+    length = sizeof(buffer);
+
+    TPM2_PrintBin(&buffer, length);
+    \endcode
+
+    \sa TPM2_PrintAuth
+    \sa TPM2_PrintPublicArea
+*/
+WOLFTPM_API void TPM2_PrintBin(const byte* buffer, word32 length);
+
+/*!
+    \ingroup TPM2_Proprietary
+    \brief Helper function to print a structure of TPMS_AUTH_COMMAND type in a human readable way
+    \note Requires DEBUG_WOLFTPM to be defined
+
+    \param authCmd pointer to a populated structure of TPMS_AUTH_COMMAND type
+
+    _Example_
+    \code
+    TPMS_AUTH_COMMAND authCmd; //for example, part of a TPM Authorization session
+
+    TPM2_PrintAuthCmd(&authCmd);
+    \endcode
+
+    \sa TPM2_PrintBin
+    \sa TPM2_PrintPublicArea
+*/
+WOLFTPM_API void TPM2_PrintAuth(const TPMS_AUTH_COMMAND* authCmd);
+
+/*!
+    \ingroup TPM2_Proprietary
+    \brief Helper function to print a structure of TPM2B_PUBLIC type in a human readable way
+    \note Requires DEBUG_WOLFTPM to be defined
+
+    \param pub pointer to a populated structure of TPM2B_PUBLIC type
+
+    _Example_
+    \code
+    TPM2B_PUBLIC pub; //for example, part of the output of a successful TPM2_Create
+
+    TPM2_PrintPublicArea(&pub);
+    \endcode
+
+    \sa TPM2_PrintBin
+    \sa TPM2_PrintAuth
+    \sa TPM2_Create
+    \sa TPM2_ReadPublic
+*/
+WOLFTPM_API void TPM2_PrintPublicArea(const TPM2B_PUBLIC* pub);
+#else
 #define TPM2_PrintBin(b, l)
 #define TPM2_PrintAuth(b)
 #define TPM2_PrintPublicArea(b)
+#endif
 
 #ifdef __cplusplus
     }  /* extern "C" */

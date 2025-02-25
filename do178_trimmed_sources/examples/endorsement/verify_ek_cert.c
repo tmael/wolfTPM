@@ -454,6 +454,10 @@ int TPM2_EndorsementCertVerify_Example(void* userCtx, int argc, char *argv[])
         }
         rc = wolfTPM2_NVReadAuth(&dev, &nv, nvIndex, cert, &certSz, 0);
         if (rc == 0) {
+        #ifdef DEBUG_WOLFTPM
+            printf("EK Data: %d\n", certSz);
+            TPM2_PrintBin(cert, certSz);
+        #endif
         }
     }
 

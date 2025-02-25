@@ -98,7 +98,12 @@ static int TPM2_CommandProcess(TPM2_CTX* ctx, TPM2_Packet* packet,
         encParamSz = tempSz;
     }
 
+#ifdef WOLFTPM_DEBUG_VERBOSE
+    printf("CommandProcess: Handles (Auth %d, In %d), CmdSz %d, AuthSz %d, ParamSz %d, EncSz %d\n",
+        info->authCnt, info->inHandleCnt, (int)cmdSz, (int)authSz, paramSz, encParamSz);
+#else
     (void)paramSz;
+#endif
 
     for (i=0; i<info->authCnt; i++) {
         TPM2_AUTH_SESSION* session = &ctx->session[i];
@@ -153,6 +158,15 @@ static int TPM2_CommandProcess(TPM2_CTX* ctx, TPM2_Packet* packet,
     /* Update the Auth Area total size in the command packet */
     i = TPM2_Packet_PlaceU32(packet, authTotalSzPos);
 
+#ifdef DEBUG_WOLFTPM
+    if ((int)authSz != i) {
+        /* actual auth size did not match estimated size from
+         * TPM2_Packet_AppendAuth */
+        printf("Error: Calculated auth size %d did not match actual %d!\n",
+            authSz, i);
+        return BUFFER_E;
+    }
+#endif
 
     (void)cmdCode;
     (void)i;
@@ -190,6 +204,10 @@ static int TPM2_ResponseProcess(TPM2_CTX* ctx, TPM2_Packet* packet,
         decParamSz = tempSz;
     }
 
+#ifdef WOLFTPM_DEBUG_VERBOSE
+    printf("ResponseProcess: Handles (Out %d), RespSz %d, ParamSz %d, DecSz %d, AuthSz %d\n",
+        info->outHandleCnt, (int)respSz, (int)paramSz, (int)decParamSz, (int)(respSz - authPos));
+#endif
 
     for (i=0; i<info->authCnt; i++) {
         TPM2_AUTH_SESSION* session = &ctx->session[i];
@@ -247,6 +265,9 @@ static TPM_RC TPM2_SendCommandAuth(TPM2_CTX* ctx, TPM2_Packet* packet,
         if (info->authCnt < 1 || ctx->session == NULL)
             return TPM_RC_AUTH_MISSING;
 
+    #ifdef WOLFTPM_DEBUG_VERBOSE
+        printf("Found %d auth sessions\n", info->authCnt);
+    #endif
 
         rc = TPM2_CommandProcess(ctx, packet, info, cmdCode, cmdSz);
         if (rc != 0)
@@ -406,20 +427,9 @@ TPM_RC TPM2_Init_ex(TPM2_CTX* ctx, TPM2HalIoCb ioCb, void* userCtx,
     ctx->tcpCtx.fd = -1;
 #endif
 
-#if defined(WOLFTPM_LINUX_DEV) || defined(WOLFTPM_SWTPM) || defined(WOLFTPM_WINAPI)
     if (ioCb != NULL || userCtx != NULL) {
         return BAD_FUNC_ARG;
     }
-#else
-    #ifdef WOLFTPM_MMIO
-    if (ioCb == NULL)
-        ioCb = TPM2_IoCb_Mmio;
-    #endif
-    /* Setup HAL IO Callback */
-    rc = TPM2_SetHalIoCb(ctx, ioCb, userCtx);
-    if (rc != TPM_RC_SUCCESS)
-        return rc;
-#endif
 
     /* Set the active TPM global */
     TPM2_SetActiveCtx(ctx);
@@ -706,6 +716,10 @@ TPM_RC TPM2_GetCapability(GetCapability_In* in, GetCapability_Out* out)
                     break;
                 }
                 default:
+            #ifdef DEBUG_WOLFTPM
+                    printf("Unknown capability type 0x%x\n",
+                        (unsigned int)out->capabilityData.capability);
+            #endif
                     break;
             }
         }
@@ -1971,6 +1985,9 @@ int TPM2_GetNonce(byte* nonceBuf, int nonceSz)
         return BAD_FUNC_ARG;
     }
 
+#ifdef WOLFTPM_DEBUG_VERBOSE
+    printf("TPM2_GetNonce (%d bytes)\n", nonceSz);
+#endif
 
 #ifdef WOLFTPM2_USE_WOLF_RNG
 #else
@@ -1988,12 +2005,19 @@ int TPM2_GetNonce(byte* nonceBuf, int nonceSz)
             TPM2_Packet_AppendU16(&packet, inSz);
             TPM2_Packet_Finalize(&packet, TPM_ST_NO_SESSIONS, TPM_CC_GetRandom);
             rc = TPM2_SendCommand(ctx, &packet);
+        #ifdef WOLFTPM_DEBUG_VERBOSE
+            printf("TPM2_GetNonce (%d bytes at %d): %d (%s)\n",
+                inSz, randSz, rc, TPM2_GetRCString(rc));
+        #endif
             if (rc != TPM_RC_SUCCESS) {
                 break;
             }
 
             TPM2_Packet_ParseU16(&packet, &outSz);
             if (outSz > MAX_RNG_REQ_SIZE) {
+            #ifdef DEBUG_WOLFTPM
+                printf("TPM2_GetNonce out size error\n");
+            #endif
                 rc = BAD_FUNC_ARG;
                 break;
             }
@@ -2026,6 +2050,9 @@ void TPM2_SetupPCRSel(TPML_PCR_SELECTION* pcr, TPM_ALG_ID alg, int pcrIndex)
             /* if no match increase the number of banks */
             if ((word32)i >= pcr->count) {
                 if (pcr->count + 1 > HASH_COUNT) {
+                #ifdef DEBUG_WOLFTPM
+                    printf("TPM2_SetupPCRSel: Hash algorithm count error\n");
+                #endif
                     return;
                 }
                 pcr->count++;
@@ -2037,6 +2064,11 @@ void TPM2_SetupPCRSel(TPML_PCR_SELECTION* pcr, TPM_ALG_ID alg, int pcrIndex)
         pcr->pcrSelections[i].pcrSelect[pcrIndex >> 3] |=
             (1 << (pcrIndex & 0x7));
     }
+#ifdef DEBUG_WOLFTPM
+    else {
+        printf("Invalid PCR Index %d\n", pcrIndex);
+    }
+#endif
 }
 
 /* Caller must zeroize/memset(0) pcr (TPML_PCR_SELECTION) */
@@ -2051,7 +2083,11 @@ void TPM2_SetupPCRSelArray(TPML_PCR_SELECTION* pcr, TPM_ALG_ID alg,
 
 
 #define TPM_RC_STRINGIFY(rc) #rc
+#ifdef DEBUG_WOLFTPM
+    #define TPM_RC_STR(rc, desc) case rc: return TPM_RC_STRINGIFY(rc) ": " desc
+#else
     #define TPM_RC_STR(rc, desc) case rc: return TPM_RC_STRINGIFY(rc)
+#endif
 
 const char* TPM2_GetRCString(int rc)
 {
@@ -2173,16 +2209,25 @@ const char* TPM2_GetRCString(int rc)
         if (rc & 0x40) { /* bit 6 */
             /* bits 8-11 */
             int param_num = (rc & 0xF00) >> 8;
+        #ifdef DEBUG_WOLFTPM
+            printf("Error: Parameter Number %d\n", param_num);
+        #endif
             (void)param_num;
         }
         else if (rc & 0x800) { /* bit 11 */
             /* bits 8-10 */
             int session_num = (rc & 0x700) >> 8;
+        #ifdef DEBUG_WOLFTPM
+            printf("Error: Session Number %d\n", session_num);
+        #endif
             (void)session_num;
         }
         else {
             /* bits 8-10 */
             int handle_num = (rc & 0x700) >> 8;
+        #ifdef DEBUG_WOLFTPM
+            printf("Error: Handle Number %d\n", handle_num);
+        #endif
             (void)handle_num;
         }
 
@@ -2412,6 +2457,159 @@ void TPM2_ForceZero(void* mem, word32 len)
     while (len--) *z++ = 0;
 }
 
+#ifdef DEBUG_WOLFTPM
+#define LINE_LEN 16
+void TPM2_PrintBin(const byte* buffer, word32 length)
+{
+    word32 i, sz;
+
+    if (!buffer) {
+        printf("\tNULL\n");
+        return;
+    }
+
+    while (length > 0) {
+        sz = length;
+        if (sz > LINE_LEN)
+            sz = LINE_LEN;
+
+        printf("\t");
+        for (i = 0; i < LINE_LEN; i++) {
+            if (i < length)
+                printf("%02x ", buffer[i]);
+            else
+                printf("   ");
+        }
+        printf("| ");
+        for (i = 0; i < sz; i++) {
+            if (buffer[i] > 31 && buffer[i] < 127)
+                printf("%c", buffer[i]);
+            else
+                printf(".");
+        }
+        printf("\r\n");
+
+        buffer += sz;
+        length -= sz;
+    }
+}
+
+void TPM2_PrintAuth(const TPMS_AUTH_COMMAND* authCmd)
+{
+    if (authCmd == NULL)
+        return;
+
+    printf("authCmd:\n");
+    printf("sessionHandle=0x%08X\n", (unsigned int)authCmd->sessionHandle);
+    printf("nonceSize=%u nonceBuffer:\n", authCmd->nonce.size);
+    TPM2_PrintBin(authCmd->nonce.buffer, authCmd->nonce.size);
+    printf("sessionAttributes=0x%02X\n", authCmd->sessionAttributes);
+    printf("hmacSize=%u hmacBuffer:\n", authCmd->hmac.size);
+    TPM2_PrintBin(authCmd->hmac.buffer, authCmd->hmac.size);
+}
+
+void TPM2_PrintPublicArea(const TPM2B_PUBLIC* pub)
+{
+    printf("Public Area (size %d):\n", pub->size);
+
+    /* Sanity check */
+    if (pub->size > (sizeof(TPM2B_PUBLIC))) {
+        printf("Invalid TPM2B_PUBLIC size\n");
+        return;
+    }
+    printf("  Type: %s (0x%X), name: %s (0x%X), objAttr: 0x%X, authPolicy sz: %d\n",
+        TPM2_GetAlgName(pub->publicArea.type), pub->publicArea.type,
+        TPM2_GetAlgName(pub->publicArea.nameAlg), pub->publicArea.nameAlg,
+        (unsigned int)pub->publicArea.objectAttributes,
+        pub->publicArea.authPolicy.size);
+    #ifdef WOLFTPM_DEBUG_VERBOSE
+    TPM2_PrintBin(pub->publicArea.authPolicy.buffer, pub->publicArea.authPolicy.size);
+    #endif
+
+    /* parameters and unique field depend on algType */
+    switch (pub->publicArea.type) {
+        case TPM_ALG_KEYEDHASH:
+            printf("  Keyed Hash: scheme: %s (0x%X), scheme hash: %s (0x%X), unique size %d\n",
+                TPM2_GetAlgName(pub->publicArea.parameters.keyedHashDetail.scheme.scheme),
+                pub->publicArea.parameters.keyedHashDetail.scheme.scheme,
+                TPM2_GetAlgName(pub->publicArea.parameters.keyedHashDetail.scheme.details.hmac.hashAlg),
+                pub->publicArea.parameters.keyedHashDetail.scheme.details.hmac.hashAlg,
+                pub->publicArea.unique.keyedHash.size);
+            #ifdef WOLFTPM_DEBUG_VERBOSE
+            TPM2_PrintBin(pub->publicArea.unique.keyedHash.buffer, pub->publicArea.unique.keyedHash.size);
+            #endif
+            break;
+        case TPM_ALG_SYMCIPHER:
+            printf("  Symmetric Cipher: algorithm: %s (0x%X), keyBits: %d, mode: %s (0x%X), unique size %d\n",
+                TPM2_GetAlgName(pub->publicArea.parameters.symDetail.sym.algorithm),
+                pub->publicArea.parameters.symDetail.sym.algorithm,
+                pub->publicArea.parameters.symDetail.sym.keyBits.sym,
+                TPM2_GetAlgName(pub->publicArea.parameters.symDetail.sym.mode.sym),
+                pub->publicArea.parameters.symDetail.sym.mode.sym,
+                pub->publicArea.unique.sym.size);
+            #ifdef WOLFTPM_DEBUG_VERBOSE
+            TPM2_PrintBin(pub->publicArea.unique.sym.buffer, pub->publicArea.unique.sym.size);
+            #endif
+            break;
+        case TPM_ALG_RSA:
+            printf("  RSA: sym algorithm: %s (0x%X), sym keyBits: %d, sym mode: %s (0x%X)\n",
+                TPM2_GetAlgName(pub->publicArea.parameters.rsaDetail.symmetric.algorithm),
+                pub->publicArea.parameters.rsaDetail.symmetric.algorithm,
+                pub->publicArea.parameters.rsaDetail.symmetric.keyBits.sym,
+                TPM2_GetAlgName(pub->publicArea.parameters.rsaDetail.symmetric.mode.sym),
+                pub->publicArea.parameters.rsaDetail.symmetric.mode.sym);
+            printf("       scheme: %s (0x%X), scheme hash: %s (0x%X)\n",
+                TPM2_GetAlgName(pub->publicArea.parameters.rsaDetail.scheme.scheme),
+                pub->publicArea.parameters.rsaDetail.scheme.scheme,
+                TPM2_GetAlgName(pub->publicArea.parameters.rsaDetail.scheme.details.anySig.hashAlg),
+                pub->publicArea.parameters.rsaDetail.scheme.details.anySig.hashAlg);
+            printf("       keyBits: %d, exponent: 0x%X, unique size %d\n",
+                pub->publicArea.parameters.rsaDetail.keyBits,
+                (unsigned int)pub->publicArea.parameters.rsaDetail.exponent,
+                pub->publicArea.unique.rsa.size);
+            #ifdef WOLFTPM_DEBUG_VERBOSE
+            TPM2_PrintBin(pub->publicArea.unique.rsa.buffer, pub->publicArea.unique.rsa.size);
+            #endif
+            break;
+        case TPM_ALG_ECC:
+            printf("  ECC: sym algorithm: %s (0x%X), sym keyBits: %d, sym mode: %s (0x%X)\n",
+                TPM2_GetAlgName(pub->publicArea.parameters.eccDetail.symmetric.algorithm),
+                pub->publicArea.parameters.eccDetail.symmetric.algorithm,
+                pub->publicArea.parameters.eccDetail.symmetric.keyBits.sym,
+                TPM2_GetAlgName(pub->publicArea.parameters.eccDetail.symmetric.mode.sym),
+                pub->publicArea.parameters.eccDetail.symmetric.mode.sym);
+            printf("       scheme: %s (0x%X), scheme hash: %s (0x%X), curveID: size %d, 0x%X\n",
+                TPM2_GetAlgName(pub->publicArea.parameters.eccDetail.scheme.scheme),
+                pub->publicArea.parameters.eccDetail.scheme.scheme,
+                TPM2_GetAlgName(pub->publicArea.parameters.eccDetail.scheme.details.any.hashAlg),
+                pub->publicArea.parameters.eccDetail.scheme.details.any.hashAlg,
+                TPM2_GetCurveSize(pub->publicArea.parameters.eccDetail.curveID),
+                pub->publicArea.parameters.eccDetail.curveID);
+            printf("       KDF scheme: %s (0x%X), KDF alg: %s (0x%X), unique X/Y size %d/%d\n",
+                TPM2_GetAlgName(pub->publicArea.parameters.eccDetail.kdf.scheme),
+                pub->publicArea.parameters.eccDetail.kdf.scheme,
+                TPM2_GetAlgName(pub->publicArea.parameters.eccDetail.kdf.details.any.hashAlg),
+                pub->publicArea.parameters.eccDetail.kdf.details.any.hashAlg,
+                pub->publicArea.unique.ecc.x.size,
+                pub->publicArea.unique.ecc.y.size);
+            #ifdef WOLFTPM_DEBUG_VERBOSE
+            TPM2_PrintBin(pub->publicArea.unique.ecc.x.buffer, pub->publicArea.unique.ecc.x.size);
+            TPM2_PrintBin(pub->publicArea.unique.ecc.y.buffer, pub->publicArea.unique.ecc.y.size);
+            #endif
+            break;
+        default:
+            /* derive does not seem to have specific fields in the parameters struct */
+            printf("Derive Type: unique label size %d, context size %d\n",
+                pub->publicArea.unique.derive.label.size,
+                pub->publicArea.unique.derive.context.size);
+            #ifdef WOLFTPM_DEBUG_VERBOSE
+            TPM2_PrintBin(pub->publicArea.unique.derive.label.buffer,pub->publicArea.unique.derive.label.size);
+            TPM2_PrintBin(pub->publicArea.unique.derive.context.buffer, pub->publicArea.unique.derive.context.size);
+            #endif
+            break;
+    }
+}
+#endif /* DEBUG_WOLFTPM */
 
 /******************************************************************************/
 /* --- END Helpful API's -- */

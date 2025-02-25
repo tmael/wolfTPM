@@ -78,6 +78,9 @@ int wolfTPM2_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
 
     (void)devId;
 
+#if defined(DEBUG_CRYPTOCB) && defined(DEBUG_WOLFTPM)
+    wc_CryptoCb_InfoString(info);
+#endif
 
     if (info->algo_type == WC_ALGO_TYPE_RNG) {
     #ifndef WC_NO_RNG
@@ -552,6 +555,10 @@ int wolfTPM2_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
 
         hmacCtx = (WOLFTPM2_HMAC*)info->hmac.hmac->devCtx;
         if (hmacCtx && hmacCtx->hash.handle.hndl == 0) {
+        #ifdef DEBUG_WOLFTPM
+            printf("Error: HMAC context invalid!\n");
+            return BAD_FUNC_ARG;
+        #endif
         }
 
         if (info->hmac.in != NULL) { /* Update */
@@ -596,6 +603,9 @@ int wolfTPM2_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
 
     /* need to return negative here for error */
     if (rc != TPM_RC_SUCCESS && rc != exit_rc) {
+    #ifdef DEBUG_WOLFTPM
+        printf("wolfTPM2_CryptoDevCb failed rc = %d\n", rc);
+    #endif
         rc = WC_HW_E;
     }
 
@@ -714,6 +724,9 @@ static int RsaPadPkcsv15Type1(const byte* input, word32 inputLen,
         return RSA_BUFFER_E;
     }
     if (pkcsBlockLen - RSA_MIN_PAD_SZ < inputLen) {
+    #ifdef DEBUG_WOLFTPM
+        printf("RsaPad error, invalid length\n");
+    #endif
         return RSA_PAD_E;
     }
 
@@ -742,6 +755,9 @@ int wolfTPM2_PK_RsaSign(WOLFSSL* ssl,
 
     (void)ssl;
 
+#ifdef DEBUG_WOLFTPM
+    printf("PK RSA Sign: inSz %u, keySz %u\n", inSz, keySz);
+#endif
 
     /* load RSA public key */
     ret = wc_InitRsaKey(&rsapub, NULL);
@@ -768,6 +784,9 @@ int wolfTPM2_PK_RsaSign(WOLFSSL* ssl,
         ret = WC_HW_E;
     }
 
+#ifdef DEBUG_WOLFTPM
+    printf("PK RSA Sign: ret %d, outSz %u\n", ret, *outSz);
+#endif
     return ret;
 }
 
@@ -998,6 +1017,9 @@ int wolfTPM2_PK_RsaPssSign(WOLFSSL* ssl,
 
     (void)ssl;
 
+#ifdef DEBUG_WOLFTPM
+    printf("PK RSA PSS Sign: inSz %u, keySz %u, hash %d\n", inSz, keySz, hash);
+#endif
 
     /* load RSA public key */
     ret = wc_InitRsaKey(&rsapub, NULL);
@@ -1026,9 +1048,16 @@ int wolfTPM2_PK_RsaPssSign(WOLFSSL* ssl,
     }
 
     if (ret > 0) {
+    #ifdef DEBUG_WOLFTPM
+        printf("PK RSA PSS Sign Hash Failure 0x%x: %s\n",
+            ret, wolfTPM2_GetRCString(ret));
+    #endif
         ret = WC_HW_E;
     }
 
+#ifdef DEBUG_WOLFTPM
+    printf("PK RSA PSS Sign: ret %d, outSz %u\n", ret, *outSz);
+#endif
     return ret;
 }
 
@@ -1069,6 +1098,9 @@ int wolfTPM2_PK_EccSign(WOLFSSL* ssl,
 
     (void)ssl;
 
+#ifdef DEBUG_WOLFTPM
+    printf("PK ECC Sign: inSz %u, keyDerSz %u\n", inSz, keyDerSz);
+#endif
 
     /* load ECC public key */
     ret = wc_ecc_init_ex(&eccpub, NULL, INVALID_DEVID);
@@ -1105,9 +1137,16 @@ int wolfTPM2_PK_EccSign(WOLFSSL* ssl,
     }
 
     if (ret > 0) {
+    #ifdef DEBUG_WOLFTPM
+        printf("PK ECC Sign Hash Failure 0x%x: %s\n",
+            ret, wolfTPM2_GetRCString(ret));
+    #endif
         ret = WC_HW_E;
     }
 
+#ifdef DEBUG_WOLFTPM
+    printf("PK ECC Sign: ret %d, outSz %u\n", ret, *outSz);
+#endif
     return ret;
 }
 #endif

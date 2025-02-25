@@ -68,12 +68,12 @@ excluded_defines=(
     [WOLFTPM_SLB9672]=''
     [WOLFTPM_NUVOTON]=''
     [WOLFTPM2_CERT_GEN]=''
-    [WOLFTPM_DEBUG_VERBOSE]=''
-    [DEBUG]=''
-    [DEBUG_WOLFTPM]=''
-    [DEBUG_WOLFSSL]=''
-    [DEBUG_WOLFSSL_VERBOSE]=''
-    [WOLFSSL_DEBUG_MEMORY]=''
+    # [WOLFTPM_DEBUG_VERBOSE]=''
+    # [DEBUG]=''
+    # [DEBUG_WOLFTPM]=''
+    # [DEBUG_WOLFSSL]=''
+    # [DEBUG_WOLFSSL_VERBOSE]=''
+    # [WOLFSSL_DEBUG_MEMORY]=''
 )
 
 function cleanup() {

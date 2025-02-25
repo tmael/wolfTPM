@@ -72,9 +72,6 @@ typedef int64_t  INT64;
 #endif
 
 /* Debug build options */
-#if defined(WOLFTPM_DEBUG_VERBOSE) && !defined(DEBUG_WOLFTPM)
-    #define DEBUG_WOLFTPM
-#endif
 
 /* ---------------------------------------------------------------------------*/
 /* WOLFCRYPT */

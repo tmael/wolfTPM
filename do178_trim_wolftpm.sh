@@ -55,6 +55,7 @@ declare -A required_defines
 required_defines=(
     [HAVE_CONFIG_H]=''
     [__cplusplus]=''
+    [WOLFTPM2_NO_WOLFCRYPT]=''
 )
 
  #   [__linux__]=''
@@ -68,8 +69,8 @@ excluded_defines=(
     [WOLFTPM_SLB9672]=''
     [WOLFTPM_NUVOTON]=''
     [WOLFTPM2_CERT_GEN]=''
-    # [WOLFTPM_DEBUG_VERBOSE]=''
-    # [DEBUG]=''
+    [WOLFTPM_DEBUG_VERBOSE]=''
+    [DEBUG]=''
     # [DEBUG_WOLFTPM]=''
     # [DEBUG_WOLFSSL]=''
     # [DEBUG_WOLFSSL_VERBOSE]=''

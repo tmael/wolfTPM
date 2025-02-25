@@ -98,12 +98,7 @@ static int TPM2_CommandProcess(TPM2_CTX* ctx, TPM2_Packet* packet,
         encParamSz = tempSz;
     }
 
-#ifdef WOLFTPM_DEBUG_VERBOSE
-    printf("CommandProcess: Handles (Auth %d, In %d), CmdSz %d, AuthSz %d, ParamSz %d, EncSz %d\n",
-        info->authCnt, info->inHandleCnt, (int)cmdSz, (int)authSz, paramSz, encParamSz);
-#else
     (void)paramSz;
-#endif
 
     for (i=0; i<info->authCnt; i++) {
         TPM2_AUTH_SESSION* session = &ctx->session[i];
@@ -204,10 +199,6 @@ static int TPM2_ResponseProcess(TPM2_CTX* ctx, TPM2_Packet* packet,
         decParamSz = tempSz;
     }
 
-#ifdef WOLFTPM_DEBUG_VERBOSE
-    printf("ResponseProcess: Handles (Out %d), RespSz %d, ParamSz %d, DecSz %d, AuthSz %d\n",
-        info->outHandleCnt, (int)respSz, (int)paramSz, (int)decParamSz, (int)(respSz - authPos));
-#endif
 
     for (i=0; i<info->authCnt; i++) {
         TPM2_AUTH_SESSION* session = &ctx->session[i];
@@ -265,9 +256,6 @@ static TPM_RC TPM2_SendCommandAuth(TPM2_CTX* ctx, TPM2_Packet* packet,
         if (info->authCnt < 1 || ctx->session == NULL)
             return TPM_RC_AUTH_MISSING;
 
-    #ifdef WOLFTPM_DEBUG_VERBOSE
-        printf("Found %d auth sessions\n", info->authCnt);
-    #endif
 
         rc = TPM2_CommandProcess(ctx, packet, info, cmdCode, cmdSz);
         if (rc != 0)
@@ -427,9 +415,20 @@ TPM_RC TPM2_Init_ex(TPM2_CTX* ctx, TPM2HalIoCb ioCb, void* userCtx,
     ctx->tcpCtx.fd = -1;
 #endif
 
+#if defined(WOLFTPM_LINUX_DEV) || defined(WOLFTPM_SWTPM) || defined(WOLFTPM_WINAPI)
     if (ioCb != NULL || userCtx != NULL) {
         return BAD_FUNC_ARG;
     }
+#else
+    #ifdef WOLFTPM_MMIO
+    if (ioCb == NULL)
+        ioCb = TPM2_IoCb_Mmio;
+    #endif
+    /* Setup HAL IO Callback */
+    rc = TPM2_SetHalIoCb(ctx, ioCb, userCtx);
+    if (rc != TPM_RC_SUCCESS)
+        return rc;
+#endif
 
     /* Set the active TPM global */
     TPM2_SetActiveCtx(ctx);
@@ -1985,9 +1984,6 @@ int TPM2_GetNonce(byte* nonceBuf, int nonceSz)
         return BAD_FUNC_ARG;
     }
 
-#ifdef WOLFTPM_DEBUG_VERBOSE
-    printf("TPM2_GetNonce (%d bytes)\n", nonceSz);
-#endif
 
 #ifdef WOLFTPM2_USE_WOLF_RNG
 #else
@@ -2005,10 +2001,6 @@ int TPM2_GetNonce(byte* nonceBuf, int nonceSz)
             TPM2_Packet_AppendU16(&packet, inSz);
             TPM2_Packet_Finalize(&packet, TPM_ST_NO_SESSIONS, TPM_CC_GetRandom);
             rc = TPM2_SendCommand(ctx, &packet);
-        #ifdef WOLFTPM_DEBUG_VERBOSE
-            printf("TPM2_GetNonce (%d bytes at %d): %d (%s)\n",
-                inSz, randSz, rc, TPM2_GetRCString(rc));
-        #endif
             if (rc != TPM_RC_SUCCESS) {
                 break;
             }
@@ -2522,9 +2514,6 @@ void TPM2_PrintPublicArea(const TPM2B_PUBLIC* pub)
         TPM2_GetAlgName(pub->publicArea.nameAlg), pub->publicArea.nameAlg,
         (unsigned int)pub->publicArea.objectAttributes,
         pub->publicArea.authPolicy.size);
-    #ifdef WOLFTPM_DEBUG_VERBOSE
-    TPM2_PrintBin(pub->publicArea.authPolicy.buffer, pub->publicArea.authPolicy.size);
-    #endif
 
     /* parameters and unique field depend on algType */
     switch (pub->publicArea.type) {
@@ -2535,9 +2524,6 @@ void TPM2_PrintPublicArea(const TPM2B_PUBLIC* pub)
                 TPM2_GetAlgName(pub->publicArea.parameters.keyedHashDetail.scheme.details.hmac.hashAlg),
                 pub->publicArea.parameters.keyedHashDetail.scheme.details.hmac.hashAlg,
                 pub->publicArea.unique.keyedHash.size);
-            #ifdef WOLFTPM_DEBUG_VERBOSE
-            TPM2_PrintBin(pub->publicArea.unique.keyedHash.buffer, pub->publicArea.unique.keyedHash.size);
-            #endif
             break;
         case TPM_ALG_SYMCIPHER:
             printf("  Symmetric Cipher: algorithm: %s (0x%X), keyBits: %d, mode: %s (0x%X), unique size %d\n",
@@ -2547,9 +2533,6 @@ void TPM2_PrintPublicArea(const TPM2B_PUBLIC* pub)
                 TPM2_GetAlgName(pub->publicArea.parameters.symDetail.sym.mode.sym),
                 pub->publicArea.parameters.symDetail.sym.mode.sym,
                 pub->publicArea.unique.sym.size);
-            #ifdef WOLFTPM_DEBUG_VERBOSE
-            TPM2_PrintBin(pub->publicArea.unique.sym.buffer, pub->publicArea.unique.sym.size);
-            #endif
             break;
         case TPM_ALG_RSA:
             printf("  RSA: sym algorithm: %s (0x%X), sym keyBits: %d, sym mode: %s (0x%X)\n",
@@ -2567,9 +2550,6 @@ void TPM2_PrintPublicArea(const TPM2B_PUBLIC* pub)
                 pub->publicArea.parameters.rsaDetail.keyBits,
                 (unsigned int)pub->publicArea.parameters.rsaDetail.exponent,
                 pub->publicArea.unique.rsa.size);
-            #ifdef WOLFTPM_DEBUG_VERBOSE
-            TPM2_PrintBin(pub->publicArea.unique.rsa.buffer, pub->publicArea.unique.rsa.size);
-            #endif
             break;
         case TPM_ALG_ECC:
             printf("  ECC: sym algorithm: %s (0x%X), sym keyBits: %d, sym mode: %s (0x%X)\n",
@@ -2592,20 +2572,12 @@ void TPM2_PrintPublicArea(const TPM2B_PUBLIC* pub)
                 pub->publicArea.parameters.eccDetail.kdf.details.any.hashAlg,
                 pub->publicArea.unique.ecc.x.size,
                 pub->publicArea.unique.ecc.y.size);
-            #ifdef WOLFTPM_DEBUG_VERBOSE
-            TPM2_PrintBin(pub->publicArea.unique.ecc.x.buffer, pub->publicArea.unique.ecc.x.size);
-            TPM2_PrintBin(pub->publicArea.unique.ecc.y.buffer, pub->publicArea.unique.ecc.y.size);
-            #endif
             break;
         default:
             /* derive does not seem to have specific fields in the parameters struct */
             printf("Derive Type: unique label size %d, context size %d\n",
                 pub->publicArea.unique.derive.label.size,
                 pub->publicArea.unique.derive.context.size);
-            #ifdef WOLFTPM_DEBUG_VERBOSE
-            TPM2_PrintBin(pub->publicArea.unique.derive.label.buffer,pub->publicArea.unique.derive.label.size);
-            TPM2_PrintBin(pub->publicArea.unique.derive.context.buffer, pub->publicArea.unique.derive.context.size);
-            #endif
             break;
     }
 }

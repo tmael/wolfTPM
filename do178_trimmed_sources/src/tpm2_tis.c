@@ -352,10 +352,6 @@ int TPM2_TIS_SendCommand(TPM2_CTX* ctx, TPM2_Packet* packet)
     if (rc != 0)
         return rc;
 
-#ifdef WOLFTPM_DEBUG_VERBOSE
-    printf("Command: %d\n", packet->pos);
-    TPM2_PrintBin(packet->buf, packet->pos);
-#endif
 
     /* Make sure TPM is ready for command */
     rc = TPM2_TIS_Status(ctx, &status);
@@ -468,12 +464,6 @@ int TPM2_TIS_SendCommand(TPM2_CTX* ctx, TPM2_Packet* packet)
         }
     }
 
-#ifdef WOLFTPM_DEBUG_VERBOSE
-    if (rspSz > 0) {
-        printf("Response: %d\n", rspSz);
-        TPM2_PrintBin(packet->buf, rspSz);
-    }
-#endif
 
     rc = TPM_RC_SUCCESS;
 

@@ -50,15 +50,22 @@ static int wolfTPM2_Init_ex(TPM2_CTX* ctx, TPM2HalIoCb ioCb, void* userCtx,
 {
     int rc;
 
+#if !defined(WOLFTPM_LINUX_DEV) && !defined(WOLFTPM_WINAPI)
+    Startup_In startupIn;
+#endif /* ! WOLFTPM_LINUX_DEV */
 
     if (ctx == NULL)
         return BAD_FUNC_ARG;
 
+#if defined(WOLFTPM_LINUX_DEV) || defined(WOLFTPM_SWTPM) || defined(WOLFTPM_WINAPI)
     rc = TPM2_Init_minimal(ctx);
     /* Using standard file I/O for the Linux TPM device */
     (void)ioCb;
     (void)userCtx;
     (void)timeoutTries;
+#else
+    rc = TPM2_Init_ex(ctx, ioCb, userCtx, timeoutTries);
+#endif
     if (rc != TPM_RC_SUCCESS) {
     #ifdef DEBUG_WOLFTPM
         printf("TPM2_Init failed %d: %s\n", rc, wolfTPM2_GetRCString(rc));
@@ -73,6 +80,23 @@ static int wolfTPM2_Init_ex(TPM2_CTX* ctx, TPM2HalIoCb ioCb, void* userCtx,
         ctx->rid);
 #endif
 
+#if !defined(WOLFTPM_LINUX_DEV) && !defined(WOLFTPM_WINAPI)
+    /* startup */
+    XMEMSET(&startupIn, 0, sizeof(Startup_In));
+    startupIn.startupType = TPM_SU_CLEAR;
+    rc = TPM2_Startup(&startupIn);
+    if (rc != TPM_RC_SUCCESS &&
+        rc != TPM_RC_INITIALIZE /* TPM_RC_INITIALIZE = Already started */ ) {
+    #ifdef DEBUG_WOLFTPM
+        printf("TPM2_Startup failed %d: %s\n", rc, wolfTPM2_GetRCString(rc));
+    #endif
+        return rc;
+    }
+#ifdef DEBUG_WOLFTPM
+    printf("TPM2_Startup pass\n");
+#endif
+
+#endif /* !WOLFTPM_LINUX_DEV && !WOLFTPM_WINAPI */
 
     return rc;
 }
@@ -346,21 +370,6 @@ int wolfTPM2_SetAuth(WOLFTPM2_DEV* dev, int index,
 
     session = &dev->session[index];
 
-  #ifdef WOLFTPM_DEBUG_VERBOSE
-    printf("Session %d: Edit\n", index);
-    printf("\tHandle 0x%x -> 0x%x\n", session->sessionHandle, sessionHandle);
-    printf("\tAttributes 0x%x -> 0x%x\n", session->sessionAttributes, sessionAttributes);
-    if (auth) {
-        printf("\tAuth Sz %d -> %d\n", session->auth.size, auth->size);
-        TPM2_PrintBin(session->auth.buffer, session->auth.size);
-        TPM2_PrintBin(auth->buffer, auth->size);
-    }
-    if (name) {
-        printf("\tName Sz %d -> %d\n", session->name.size, name->size);
-        TPM2_PrintBin(session->name.name, session->name.size);
-        TPM2_PrintBin(name->name, name->size);
-    }
-#endif
 
     XMEMSET(session, 0, sizeof(TPM2_AUTH_SESSION));
     session->sessionHandle = sessionHandle;

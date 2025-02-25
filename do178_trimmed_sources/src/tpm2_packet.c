@@ -257,9 +257,6 @@ void TPM2_Packet_AppendAuthCmd(TPM2_Packet* packet, TPMS_AUTH_COMMAND* authCmd)
         return;
     }
 
-#ifdef WOLFTPM_DEBUG_VERBOSE
-    TPM2_PrintAuth(authCmd);
-#endif
 
     TPM2_Packet_AppendU32(packet, authCmd->sessionHandle);
     TPM2_Packet_AppendU16(packet, authCmd->nonce.size);

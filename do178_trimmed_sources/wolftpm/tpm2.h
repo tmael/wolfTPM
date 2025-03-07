@@ -3292,50 +3292,6 @@ WOLFTPM_API int TPM2_GetHashDigestSize(TPMI_ALG_HASH hashAlg);
 
 /*!
     \ingroup TPM2_Proprietary
-    \brief Translate a TPM2 hash type to its corresponding wolfcrypt hash type
-
-    \return a value specifying a hash type to use with wolfcrypt
-    \return 0 if hash type is invalid
-
-    \param hashAlg a valid TPM 2.0 hash type
-
-    _Example_
-    \code
-    int wc_hashType;
-    TPMI_ALG_HASH hashAlg = TPM_ALG_SHA256;
-
-    wc_hashType = TPM2_GetHashDigestSize(hashAlg);
-    if (wc_hashType > 0) {
-        //wc_hashType contains a valid wolfcrypt hash type
-    }
-    \endcode
-*/
-WOLFTPM_API int TPM2_GetHashType(TPMI_ALG_HASH hashAlg);
-
-/*!
-    \ingroup TPM2_Proprietary
-    \brief Translate a wolfCrypt hash type to TPM2 hash type
-
-    \return a TPM2 hash type (TPM_ALG_*)
-    \return TPM_ALG_ERROR when wolfCrypt hash type is invalid or not found
-
-    \param hashType a wolfCrypt hash type
-
-    _Example_
-    \code
-    int wc_hashType = WC_HASH_TYPE_SHA256;
-    TPMI_ALG_HASH hashAlg;
-
-    hashAlg = TPM2_GetHashDigestSize(wc_hashType);
-    if (hashAlg != TPM_ALG_ERROR) {
-        //hashAlg contains a valid TPM2 hash type
-    }
-    \endcode
-*/
-WOLFTPM_API TPMI_ALG_HASH TPM2_GetTpmHashType(int hashType);
-
-/*!
-    \ingroup TPM2_Proprietary
     \brief Generate a fresh nonce of random numbers
     \note Can use the TPM random number generator if WOLFTPM2_USE_HW_RNG is defined
 
@@ -3499,7 +3455,6 @@ WOLFTPM_API int TPM2_GetCurveSize(TPM_ECC_CURVE curveID);
     \sa TPM2_GetWolfCurve
 */
 WOLFTPM_API int TPM2_GetTpmCurve(int curveID);
-
 /*!
     \ingroup TPM2_Proprietary
     \brief Translate a TPM curve type to its corresponding wolfcrypt curve type
@@ -3524,149 +3479,6 @@ WOLFTPM_API int TPM2_GetTpmCurve(int curveID);
     \sa TPM2_GetTpmCurve
 */
 WOLFTPM_API int TPM2_GetWolfCurve(int curve_id);
-
-/*!
-    \ingroup TPM2_Proprietary
-    \brief Parses TPM2B_ATTEST and populates the data in TPMS_ATTEST structure
-    \note This is public API of the helper function TPM2_Packet_ParseAttest
-
-    \return TPM_RC_SUCCESS: successful
-    \return BAD_FUNC_ARG: check the provided arguments
-
-    \param in pointer to a structure of a TPM2B_ATTEST type
-    \param out pointer to a structure of a TPMS_ATTEST type
-
-    _Example_
-    \code
-    TPM2B_ATTEST in; //for example, as part of a TPM2_Quote
-    TPMS_ATTEST out
-
-    rc = TPM2_GetNonce(&in, &out);
-    if (rc != TPM_RC_SUCCESS) {
-        //TPM2_ParseAttest failed
-    }
-    \endcode
-*/
-WOLFTPM_API int TPM2_ParseAttest(const TPM2B_ATTEST* in, TPMS_ATTEST* out);
-
-/*!
-    \ingroup TPM2_Proprietary
-    \brief Computes fresh NV Index name based on a nvPublic structure
-
-    \return TPM_RC_SUCCESS: successful
-    \return negative integer value in case of an error
-    \return BAD_FUNC_ARG: check the provided arguments
-    \return NOT_COMPILED_IN: check if wolfcrypt is enabled
-
-    \param nvPublic
-    \param buffer pointer to a structure of a TPMS_ATTEST type
-    \param size pointer to a variable of UINT16 type to store the size of the nvIndex
-
-    _Example_
-    \code
-    TPMS_NV_PUBLIC nvPublic;
-    BYTE buffer[TPM_MAX_DIGEST_SIZE];
-    UINT16 size;
-
-    rc = TPM2_HashNvPublic(&nvPublic, &buffer, &size);
-    if (rc != TPM_RC_SUCCESS) {
-        //TPM2_HashNvPublic failed
-    }
-    \endcode
-*/
-WOLFTPM_API int TPM2_HashNvPublic(TPMS_NV_PUBLIC* nvPublic, byte* buffer, UINT16* size);
-
-/*!
-    \ingroup TPM2_Proprietary
-    \brief Populates TPM2B_PUBLIC structure based on a user provided buffer
-    \note Public API of the helper function TPM2_Packet_AppendPublic
-
-    \return TPM_RC_SUCCESS: successful
-    \return TPM_RC_FAILURE: insufficient buffer size
-    \return BAD_FUNC_ARG: check the provided arguments
-
-    \param buf pointer to a user buffer
-    \param size integer value of word32 type, specifying the size of the user buffer
-    \param sizeUsed pointer to an integer variable, stores the used size of pub->buffer
-    \param pub pointer to an empty structure of TPM2B_PUBLIC type
-
-    _Example_
-    \code
-    TPM2B_PUBLIC pub; //empty
-    int sizeUsed, rc;
-    BYTE buffer[sizeof(TPM2B_PUBLIC)];
-    word32 size = sizeof(buffer);
-
-    rc = TPM2_AppendPublic(&buffer, size, &sizeUsed, &pub);
-    if (rc != TPM_RC_SUCCESS) {
-        //TPM2_AppendPublic failed
-    }
-    \endcode
-
-    \sa TPM2_ParsePublic
-*/
-WOLFTPM_API int TPM2_AppendPublic(byte* buf, word32 size, int* sizeUsed, TPM2B_PUBLIC* pub);
-
-/*!
-    \ingroup TPM2_Proprietary
-    \brief Parses TPM2B_PUBLIC structure and stores in a user provided buffer
-    \note Public API of the helper function TPM2_Packet_ParsePublic
-
-    \return TPM_RC_SUCCESS: successful
-    \return TPM_RC_FAILURE: insufficient buffer size
-    \return BAD_FUNC_ARG: check the provided arguments
-
-    \param pub pointer to a populated structure of TPM2B_PUBLIC type
-    \param buf pointer to an empty user buffer
-    \param size integer value of word32 type, specifying the available size of the user buffer
-    \param sizeUsed pointer to an integer variable, stores the used size of the user buffer
-
-    _Example_
-    \code
-    TPM2B_PUBLIC pub; //populated
-    int sizeUsed, rc;
-    BYTE buffer[sizeof(TPM2B_PUBLIC)];
-    word32 size = sizeof(buffer);
-
-    rc = TPM2_ParsePublic(&pub, buffer, size, &sizeUsed);
-    if (rc != TPM_RC_SUCCESS) {
-        //TPM2_ParsePublic failed
-    }
-    \endcode
-
-    \sa TPM2_AppendPublic
-*/
-WOLFTPM_API int TPM2_ParsePublic(TPM2B_PUBLIC* pub, byte* buf, word32 size, int* sizeUsed);
-
-/*!
-    \ingroup TPM2_Proprietary
-    \brief Provides the Name of a TPM object
-    \note The object is reference by its TPM handle and session index
-
-    \return TPM_RC_SUCCESS: successful
-    \return BAD_FUNC_ARG: check the provided arguments
-
-    \param ctx pointer to a TPM2 context
-    \param handleValue value of UINT32 type, specifying a valid TPM handle
-    \param handleCnt total number of handles used in the current TPM command/session
-    \param idx index value, between one and three, specifying a valid TPM Authorization session
-    \param name pointer to an empty structure of TPM2B_NAME type
-
-    _Example_
-    \code
-    int rc;
-    UINT32 handleValue = TRANSIENT_FIRST;
-    handleCount = 1;
-    sessionIdx = 0;
-    TPM2B_NAME name;
-
-    rc = TPM2_GetName(ctx, handleValue, handleCount, sessionIdx, &name);
-    if (rc != TPM_RC_SUCCESS) {
-        //TPM2_GetName failed
-    }
-    \endcode
-*/
-WOLFTPM_LOCAL int TPM2_GetName(TPM2_CTX* ctx, UINT32 handleValue, int handleCnt, int idx, TPM2B_NAME* name);
 
 
 typedef enum {

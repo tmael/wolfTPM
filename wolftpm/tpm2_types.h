@@ -272,6 +272,7 @@ typedef int64_t  INT64;
     #define WOLFTPM_MICROCHIP
 #endif
 
+#ifndef HAVE_DO178
 /* ST ST33TP TPM 2.0 */
 /* #define WOLFTPM_ST33 */
 
@@ -338,6 +339,18 @@ typedef int64_t  INT64;
         #define TPM2_SPI_MAX_HZ TPM2_SPI_MAX_HZ_INFINEON
     #endif
 #endif
+#else /* HAVE_DO178 */
+    /* ST ST33TPM20 modules */
+    /* Requires wait state support */
+    #ifndef WOLFTPM_CHECK_WAIT_STATE
+        #define WOLFTPM_CHECK_WAIT_STATE
+    #endif
+    /* Max: 33MHz */
+    #define TPM2_SPI_MAX_HZ_ST 33000000
+    #ifndef TPM2_SPI_MAX_HZ
+        #define TPM2_SPI_MAX_HZ TPM2_SPI_MAX_HZ_ST
+    #endif
+#endif /* !HAVE_DO178 */
 
 /* Auto-chip detection requires SPI wait state support and safe SPI bus speed */
 #ifdef WOLFTPM_AUTODETECT
@@ -671,6 +684,7 @@ typedef int64_t  INT64;
     #define WOLFTPM2_WRAP_ECC_KEY_BITS (MAX_ECC_KEY_BITS*8)
 #endif
 
+#ifndef HAVE_DO178
 #if !defined(WOLFTPM2_NO_WOLFCRYPT) && \
     (defined(WOLF_CRYPTO_DEV) || defined(WOLF_CRYPTO_CB))
     /* Enable the crypto callback support */
@@ -689,6 +703,7 @@ typedef int64_t  INT64;
     /* Enable the certificate PEM decode support */
     #define WOLFTPM2_PEM_DECODE
 #endif
+#endif /* !HAVE_DO178 */
 
 /* Firmware upgrade requires wolfCrypt for hashing.
  * Supported only for Infineon SLB9672/SLB9673 */
@@ -698,12 +713,13 @@ typedef int64_t  INT64;
     #undef WOLFTPM_FIRMWARE_UPGRADE
 #endif
 
+#ifndef HAVE_DO178
 #if !defined(WOLFTPM2_NO_WOLFCRYPT) && \
     !defined(NO_AES) && defined(WOLFSSL_AES_CFB) && !defined(NO_HMAC)
     /* Support for importing external private keys */
     #define WOLFTPM2_PRIVATE_IMPORT
 #endif
-
+#endif /* !HAVE_DO178 */
 
 /* ---------------------------------------------------------------------------*/
 /* ENDIANESS HELPERS */
@@ -713,6 +729,7 @@ typedef int64_t  INT64;
     #include "intrinsics.h"
 #endif
 
+#ifndef HAVE_DO178
 #ifdef INTEL_INTRINSICS
     /* for non visual studio probably need no long version, 32 bit only
      * i.e., _rotl and _rotr */
@@ -743,9 +760,21 @@ typedef int64_t  INT64;
         return (x >> y) | (x << (sizeof(y) * 8 - y));
     }
 #endif
+#else /* HAVE_DO178 */
+    /* This routine performs a left circular arithmetic shift of <x> by <y> value. */
+    static inline word32 rotlFixed(word32 x, word32 y) {
+        return (x << y) | (x >> (sizeof(y) * 8 - y));
+    }
+    /* This routine performs a right circular arithmetic shift of <x> by <y> value. */
+    static inline word32 rotrFixed(word32 x, word32 y)
+    {
+        return (x >> y) | (x << (sizeof(y) * 8 - y));
+    }
+#endif /* !HAVE_DO178 */
 
 static inline word16 ByteReverseWord16(word16 value)
 {
+#ifndef HAVE_DO178
 #if defined(__ICCARM__)
     return (word16)__REV16(value);
 #elif defined(KEIL_INTRINSICS)
@@ -755,10 +784,14 @@ static inline word16 ByteReverseWord16(word16 value)
 #else
     return (value >> 8) | (value << 8);
 #endif
+#else /* HAVE_DO178 */
+    return (value >> 8) | (value << 8);
+#endif /* !HAVE_DO178 */
 }
 
 static inline word32 ByteReverseWord32(word32 value)
 {
+#ifndef HAVE_DO178
 #if defined(WOLF_ALLOW_BUILTIN) && defined(__GNUC_PREREQ) && __GNUC_PREREQ(4, 3)
     return (word32)__builtin_bswap32(value);
 #elif defined(PPC_INTRINSICS)
@@ -795,16 +828,26 @@ static inline word32 ByteReverseWord32(word32 value)
     value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8);
     return rotlFixed(value, 16U);
 #endif
+#else /* HAVE_DO178 */
+    /* 6 instructions with rotate instruction, 8 without */
+    value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8);
+    return rotlFixed(value, 16U);
+#endif /* !HAVE_DO178 */
 }
 
 static inline word64 ByteReverseWord64(word64 value)
 {
+#ifndef HAVE_DO178
 #if defined(WOLF_ALLOW_BUILTIN) && defined(__GNUC_PREREQ) && __GNUC_PREREQ(4, 3)
     return (word64)__builtin_bswap64(value);
 #else
     return (word64)((word64)ByteReverseWord32((word32)value)) << 32 |
                     (word64)ByteReverseWord32((word32)(value  >> 32));
 #endif
+#else /* HAVE_DO178 */
+    return (word64)((word64)ByteReverseWord32((word32)value)) << 32 |
+                    (word64)ByteReverseWord32((word32)(value  >> 32));
+#endif /* !HAVE_DO178 */
 }
 
 /* ---------------------------------------------------------------------------*/

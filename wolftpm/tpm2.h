@@ -257,11 +257,12 @@ typedef enum {
     TPM_CC_SetCommandSetLock        = CC_VEND + 0x030B,
     TPM_CC_GPIO_Config              = CC_VEND + 0x030F,
 #endif
+#ifndef HAVE_DO178
 #ifdef WOLFTPM_NUVOTON
     TPM_CC_NTC2_PreConfig           = CC_VEND + 0x0211,
     TPM_CC_NTC2_GetConfig           = CC_VEND + 0x0213,
 #endif
-#ifndef HAVE_DO178
+
 #if defined(WOLFTPM_SLB9672) || defined(WOLFTPM_SLB9673)
     TPM_CC_FieldUpgradeStartVendor    = CC_VEND + 0x12F,
     TPM_CC_FieldUpgradeAbandonVendor  = CC_VEND + 0x130,
@@ -3401,7 +3402,7 @@ WOLFTPM_API TPM2_CTX* TPM2_GetActiveCtx(void);
     \endcode
 */
 WOLFTPM_API int TPM2_GetHashDigestSize(TPMI_ALG_HASH hashAlg);
-
+#ifndef HAVE_DO178
 /*!
     \ingroup TPM2_Proprietary
     \brief Translate a TPM2 hash type to its corresponding wolfcrypt hash type
@@ -3445,6 +3446,7 @@ WOLFTPM_API int TPM2_GetHashType(TPMI_ALG_HASH hashAlg);
     \endcode
 */
 WOLFTPM_API TPMI_ALG_HASH TPM2_GetTpmHashType(int hashType);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup TPM2_Proprietary
@@ -3611,7 +3613,6 @@ WOLFTPM_API int TPM2_GetCurveSize(TPM_ECC_CURVE curveID);
     \sa TPM2_GetWolfCurve
 */
 WOLFTPM_API int TPM2_GetTpmCurve(int curveID);
-
 /*!
     \ingroup TPM2_Proprietary
     \brief Translate a TPM curve type to its corresponding wolfcrypt curve type
@@ -3636,7 +3637,7 @@ WOLFTPM_API int TPM2_GetTpmCurve(int curveID);
     \sa TPM2_GetTpmCurve
 */
 WOLFTPM_API int TPM2_GetWolfCurve(int curve_id);
-
+#ifndef HAVE_DO178
 /*!
     \ingroup TPM2_Proprietary
     \brief Parses TPM2B_ATTEST and populates the data in TPMS_ATTEST structure
@@ -3779,6 +3780,7 @@ WOLFTPM_API int TPM2_ParsePublic(TPM2B_PUBLIC* pub, byte* buf, word32 size, int*
     \endcode
 */
 WOLFTPM_LOCAL int TPM2_GetName(TPM2_CTX* ctx, UINT32 handleValue, int handleCnt, int idx, TPM2B_NAME* name);
+#endif /* !HAVE_DO178 */
 
 #ifndef HAVE_DO178
 #ifdef WOLFTPM2_USE_WOLF_RNG
@@ -3822,6 +3824,7 @@ WOLFTPM_LOCAL void TPM2_ForceZero(void* mem, word32 len);
 
 
 #ifdef DEBUG_WOLFTPM
+#ifndef HAVE_DO178
 /*!
     \ingroup TPM2_Proprietary
     \brief Helper function to print a binary buffer in a formatted way
@@ -3882,6 +3885,7 @@ WOLFTPM_API void TPM2_PrintAuth(const TPMS_AUTH_COMMAND* authCmd);
     \sa TPM2_ReadPublic
 */
 WOLFTPM_API void TPM2_PrintPublicArea(const TPM2B_PUBLIC* pub);
+#endif /* !HAVE_DO178 */
 #else
 #define TPM2_PrintBin(b, l)
 #define TPM2_PrintAuth(b)

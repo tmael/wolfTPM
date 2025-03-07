@@ -265,19 +265,6 @@ typedef int64_t  INT64;
     #define WOLFTPM_MICROCHIP
 #endif
 
-/* ST ST33TP TPM 2.0 */
-/* #define WOLFTPM_ST33 */
-
-/* Nuvoton NPCT75x TPM 2.0 module */
-/* #define WOLFTPM_NUVOTON */
-
-/* Infineon SLB9670 TPM 2.0 (default) */
-/* #define WOLFTPM_SLB9670 */
-/* #define WOLFTPM_SLB9672 */
-
-
-/* Chip Specific Settings */
-#if   defined(WOLFTPM_ST33)
     /* ST ST33TPM20 modules */
     /* Requires wait state support */
     #ifndef WOLFTPM_CHECK_WAIT_STATE
@@ -288,19 +275,6 @@ typedef int64_t  INT64;
     #ifndef TPM2_SPI_MAX_HZ
         #define TPM2_SPI_MAX_HZ TPM2_SPI_MAX_HZ_ST
     #endif
-#else
-    /* Infineon OPTIGA SLB9670/SLB9672/SLB9673 */
-    #if   !defined(WOLFTPM_AUTODETECT)
-            #undef  WOLFTPM_SLB9672
-            #define WOLFTPM_SLB9672
-
-        /* Max: 33MHz */
-        #define TPM2_SPI_MAX_HZ_INFINEON 33000000
-    #endif
-    #ifndef TPM2_SPI_MAX_HZ
-        #define TPM2_SPI_MAX_HZ TPM2_SPI_MAX_HZ_INFINEON
-    #endif
-#endif
 
 /* Auto-chip detection requires SPI wait state support and safe SPI bus speed */
 #ifdef WOLFTPM_AUTODETECT
@@ -624,30 +598,11 @@ typedef int64_t  INT64;
     #define WOLFTPM2_WRAP_ECC_KEY_BITS (MAX_ECC_KEY_BITS*8)
 #endif
 
-#if !defined(WOLFTPM2_NO_WOLFCRYPT) && (defined(WOLF_CRYPTO_DEV) || defined(WOLF_CRYPTO_CB))
-    /* Enable the crypto callback support */
-    #define WOLFTPM_CRYPTOCB
-#endif
-
-#if !defined(WOLFTPM2_NO_WOLFCRYPT) && defined(WOLFSSL_CERT_GEN) && (!defined(NO_RSA) || defined(HAVE_ECC))
-    /* Enable the certificate generation support */
-    #define WOLFTPM2_CERT_GEN
-#endif
-
-#if !defined(WOLFTPM2_NO_HEAP) && defined(WOLFSSL_PEM_TO_DER) && (defined(WOLFSSL_CERT_EXT) || defined(WOLFSSL_PUB_PEM_TO_DER)) && !defined(NO_ASN)
-    /* Enable the certificate PEM decode support */
-    #define WOLFTPM2_PEM_DECODE
-#endif
 
 /* Firmware upgrade requires wolfCrypt for hashing.
  * Supported only for Infineon SLB9672/SLB9673 */
 #if defined(WOLFTPM_FIRMWARE_UPGRADE) && (defined(WOLFTPM2_NO_WOLFCRYPT) || (!defined(WOLFTPM_SLB9672) && !defined(WOLFTPM_SLB9673)))
     #undef WOLFTPM_FIRMWARE_UPGRADE
-#endif
-
-#if !defined(WOLFTPM2_NO_WOLFCRYPT) && !defined(NO_AES) && defined(WOLFSSL_AES_CFB) && !defined(NO_HMAC)
-    /* Support for importing external private keys */
-    #define WOLFTPM2_PRIVATE_IMPORT
 #endif
 
 
@@ -659,26 +614,6 @@ typedef int64_t  INT64;
     #include "intrinsics.h"
 #endif
 
-#ifdef INTEL_INTRINSICS
-    /* for non visual studio probably need no long version, 32 bit only
-     * i.e., _rotl and _rotr */
-    #include <stdlib.h>      /* get intrinsic definitions */
-    #pragma intrinsic(_lrotl, _lrotr)
-    static inline word32 rotlFixed(word32 x, word32 y) {
-        return y ? _lrotl(x, y) : x;
-    }
-    static inline word32 rotrFixed(word32 x, word32 y) {
-        return y ? _lrotr(x, y) : x;
-    }
-#elif defined(__CCRX__)
-    #include <builtin.h>      /* get intrinsic definitions */
-    static inline word32 rotlFixed(word32 x, word32 y) {
-        return _builtin_rotl(x, y);
-    }
-    static inline word32 rotrFixed(word32 x, word32 y) {
-        return _builtin_rotr(x, y);
-    }
-#else /* generic */
     /* This routine performs a left circular arithmetic shift of <x> by <y> value. */
     static inline word32 rotlFixed(word32 x, word32 y) {
         return (x << y) | (x >> (sizeof(y) * 8 - y));
@@ -688,67 +623,23 @@ typedef int64_t  INT64;
     {
         return (x >> y) | (x << (sizeof(y) * 8 - y));
     }
-#endif
 
 static inline word16 ByteReverseWord16(word16 value)
 {
-#if defined(__ICCARM__)
-    return (word16)__REV16(value);
-#elif defined(KEIL_INTRINSICS)
-    return (word16)__rev16(value);
-#elif defined(__GNUC_PREREQ) && __GNUC_PREREQ(4, 3)
-    return (word16)__builtin_bswap16(value);
-#else
     return (value >> 8) | (value << 8);
-#endif
 }
 
 static inline word32 ByteReverseWord32(word32 value)
 {
-#if defined(WOLF_ALLOW_BUILTIN) && defined(__GNUC_PREREQ) && __GNUC_PREREQ(4, 3)
-    return (word32)__builtin_bswap32(value);
-#elif defined(PPC_INTRINSICS)
-    /* PPC: load reverse indexed instruction */
-    return (word32)__lwbrx(&value,0);
-#elif defined(__ICCARM__)
-    return (word32)__REV(value);
-#elif defined(KEIL_INTRINSICS)
-    return (word32)__rev(value);
-#elif defined(__CCRX__)
-    return (word32)_builtin_revl(value);
-#elif defined(WOLFSSL_BYTESWAP32_ASM) && defined(__GNUC__) && defined(__aarch64__)
-    __asm__ volatile (
-        "REV32 %0, %0  \n"
-        : "+r" (value)
-        :
-    );
-    return value;
-#elif defined(WOLFSSL_BYTESWAP32_ASM) && defined(__GNUC__) && (defined(__thumb__) || defined(__arm__))
-    __asm__ volatile (
-        "REV %0, %0  \n"
-        : "+r" (value)
-        :
-    );
-    return value;
-#elif defined(FAST_ROTATE)
-    /* 5 instructions with rotate instruction, 9 without */
-    return (rotrFixed(value, 8U) & 0xff00ff00) |
-           (rotlFixed(value, 8U) & 0x00ff00ff);
-#else
     /* 6 instructions with rotate instruction, 8 without */
     value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8);
     return rotlFixed(value, 16U);
-#endif
 }
 
 static inline word64 ByteReverseWord64(word64 value)
 {
-#if defined(WOLF_ALLOW_BUILTIN) && defined(__GNUC_PREREQ) && __GNUC_PREREQ(4, 3)
-    return (word64)__builtin_bswap64(value);
-#else
     return (word64)((word64)ByteReverseWord32((word32)value)) << 32 |
                     (word64)ByteReverseWord32((word32)(value  >> 32));
-#endif
 }
 
 /* ---------------------------------------------------------------------------*/

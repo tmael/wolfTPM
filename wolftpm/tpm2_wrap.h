@@ -28,7 +28,6 @@
     extern "C" {
 #endif
 
-
 typedef struct WOLFTPM2_HANDLE {
     TPM_HANDLE      hndl;
     TPM2B_AUTH      auth;
@@ -96,6 +95,7 @@ typedef struct WOLFTPM2_NV {
     TPMA_NV attributes;
 } WOLFTPM2_NV;
 
+#ifndef HAVE_DO178
 typedef struct WOLFTPM2_HMAC {
     WOLFTPM2_HASH   hash;
     WOLFTPM2_KEY    key;
@@ -116,6 +116,7 @@ typedef struct WOLFTPM2_BUFFER {
     int size;
     byte buffer[MAX_DIGEST_BUFFER];
 } WOLFTPM2_BUFFER;
+#endif /* !HAVE_DO178 */
 
 typedef enum WOLFTPM2_MFG {
     TPM_MFG_UNKNOWN = 0,
@@ -183,6 +184,7 @@ typedef struct WOLFTPM2_CAPS {
 */
 WOLFTPM_API int wolfTPM2_Test(TPM2HalIoCb ioCb, void* userCtx, WOLFTPM2_CAPS* caps);
 
+
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Complete initialization of a TPM
@@ -229,6 +231,7 @@ WOLFTPM_API int wolfTPM2_Init(WOLFTPM2_DEV* dev, TPM2HalIoCb ioCb, void* userCtx
     \sa wolfTPM2_Cleanup
     \sa TPM2_Init
 */
+#ifndef HAVE_DO178
 WOLFTPM_API int wolfTPM2_OpenExisting(WOLFTPM2_DEV* dev, TPM2HalIoCb ioCb, void* userCtx);
 
 /*!
@@ -257,6 +260,7 @@ WOLFTPM_API int wolfTPM2_OpenExisting(WOLFTPM2_DEV* dev, TPM2HalIoCb ioCb, void*
     \sa wolfTPM2_Test
     \sa TPM2_Init
 */
+#endif /* !HAVE_DO178 */
 WOLFTPM_API int wolfTPM2_Cleanup(WOLFTPM2_DEV* dev);
 
 /*!
@@ -288,6 +292,7 @@ WOLFTPM_API int wolfTPM2_Cleanup(WOLFTPM2_DEV* dev);
 */
 WOLFTPM_API int wolfTPM2_Cleanup_ex(WOLFTPM2_DEV* dev, int doShutdown);
 
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Provides the device ID of a TPM
@@ -340,6 +345,7 @@ WOLFTPM_API int wolfTPM2_GetTpmDevId(WOLFTPM2_DEV* dev);
     \sa TPM2_Init
 */
 WOLFTPM_API int wolfTPM2_SelfTest(WOLFTPM2_DEV* dev);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -475,6 +481,7 @@ WOLFTPM_API int wolfTPM2_SetAuth(WOLFTPM2_DEV* dev, int index,
     \sa wolfTPM2_SetAuthSession
     \sa wolfTPM2_SetAuth
 */
+
 WOLFTPM_API int wolfTPM2_SetAuthPassword(WOLFTPM2_DEV* dev, int index, const TPM2B_AUTH* auth);
 
 /*!
@@ -494,8 +501,10 @@ WOLFTPM_API int wolfTPM2_SetAuthPassword(WOLFTPM2_DEV* dev, int index, const TPM
     \sa wolfTPM2_SetAuthHandle
     \sa wolfTPM2_SetAuthSession
 */
+
 WOLFTPM_API int wolfTPM2_SetAuthHandle(WOLFTPM2_DEV* dev, int index, const WOLFTPM2_HANDLE* handle);
 
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Sets a TPM Authorization slot using the provided TPM session handle, index and session attributes
@@ -516,7 +525,7 @@ WOLFTPM_API int wolfTPM2_SetAuthHandle(WOLFTPM2_DEV* dev, int index, const WOLFT
 */
 WOLFTPM_API int wolfTPM2_SetAuthSession(WOLFTPM2_DEV* dev, int index,
     WOLFTPM2_SESSION* tpmSession, TPMA_SESSION sessionAttributes);
-
+#endif /* !HAVE_DO178 */
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Sets a TPM Authorization slot using the provided wolfTPM2 session object
@@ -556,6 +565,7 @@ WOLFTPM_API int wolfTPM2_SetSessionHandle(WOLFTPM2_DEV* dev, int index,
 */
 WOLFTPM_API int wolfTPM2_SetAuthHandleName(WOLFTPM2_DEV* dev, int index, const WOLFTPM2_HANDLE* handle);
 
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Create a TPM session, Policy, HMAC or Trial
@@ -594,6 +604,7 @@ WOLFTPM_API int wolfTPM2_StartSession(WOLFTPM2_DEV* dev,
 */
 WOLFTPM_API int wolfTPM2_CreateAuthSession_EkPolicy(WOLFTPM2_DEV* dev,
                                                     WOLFTPM2_SESSION* tpmSession);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -649,6 +660,7 @@ WOLFTPM_API int wolfTPM2_CreatePrimaryKey_ex(WOLFTPM2_DEV* dev, WOLFTPM2_PKEY* p
     TPM_HANDLE primaryHandle, TPMT_PUBLIC* publicTemplate,
     const byte* auth, int authSz);
 
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Change the authorization secret of a TPM 2.0 key
@@ -763,6 +775,7 @@ WOLFTPM_API int wolfTPM2_CreateAndLoadKey(WOLFTPM2_DEV* dev,
 WOLFTPM_API int wolfTPM2_CreateLoadedKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEYBLOB* keyBlob,
     WOLFTPM2_HANDLE* parent, TPMT_PUBLIC* publicTemplate,
     const byte* auth, int authSz);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -787,7 +800,7 @@ WOLFTPM_API int wolfTPM2_LoadPublicKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
 /* Same as wolfTPM2_LoadPublicKey, but adds hierarchy option (default is owner) */
 WOLFTPM_API int wolfTPM2_LoadPublicKey_ex(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
     const TPM2B_PUBLIC* pub, TPM_HANDLE hierarchy);
-
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Single function to import an external private key and load it into the TPM in one step
@@ -1239,7 +1252,9 @@ WOLFTPM_API int wolfTPM2_ComputeName(const TPM2B_PUBLIC* pub, TPM2B_NAME* out);
 WOLFTPM_API int wolfTPM2_SensitiveToPrivate(TPM2B_SENSITIVE* sens, TPM2B_PRIVATE* priv,
     TPMI_ALG_HASH nameAlg, TPM2B_NAME* name, const WOLFTPM2_KEY* parentKey,
     TPMT_SYM_DEF_OBJECT* sym, TPM2B_DATA* symSeed);
+#endif /* !HAVE_DO178 */
 
+#ifndef HAVE_DO178
 #ifndef WOLFTPM2_NO_WOLFCRYPT
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -1561,7 +1576,9 @@ WOLFTPM_API int wolfTPM2_DecodeEccDer(const byte* der, word32 derSz,
     TPM2B_PUBLIC* pub, TPM2B_SENSITIVE* sens, TPMA_OBJECT attributes);
 #endif /* HAVE_ECC */
 #endif /* !WOLFTPM2_NO_WOLFCRYPT */
+#endif /* !HAVE_DO178 */
 
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Helper function to sign arbitrary data using a TPM key
@@ -1820,6 +1837,7 @@ WOLFTPM_API int wolfTPM2_ECDHEGenKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* ecdhKey,
 WOLFTPM_API int wolfTPM2_ECDHEGenZ(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* parentKey,
     WOLFTPM2_KEY* ecdhKey, const TPM2B_ECC_POINT* pubPoint,
     byte* out, int* outSz);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -1921,6 +1939,7 @@ WOLFTPM_API int wolfTPM2_ResetPCR(WOLFTPM2_DEV* dev, int pcrIndex);
 WOLFTPM_API int wolfTPM2_ExtendPCR(WOLFTPM2_DEV* dev, int pcrIndex, int hashAlg,
     const byte* digest, int digestLen);
 
+#ifndef HAVE_DO178
 /* Newer API's that use WOLFTPM2_NV context and support auth */
 
 /*!
@@ -2056,6 +2075,7 @@ WOLFTPM_API int wolfTPM2_NVWriteAuthPolicy(WOLFTPM2_DEV* dev, WOLFTPM2_SESSION* 
 */
 WOLFTPM_API int wolfTPM2_NVExtend(WOLFTPM2_DEV* dev, WOLFTPM2_NV* nv,
     word32 nvIndex, byte* dataBuf, word32 dataSz);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -2110,6 +2130,7 @@ WOLFTPM_API int wolfTPM2_NVReadAuthPolicy(WOLFTPM2_DEV* dev, WOLFTPM2_SESSION* t
     TPM_ALG_ID pcrAlg, byte* pcrArray, word32 pcrArraySz, WOLFTPM2_NV* nv,
     word32 nvIndex, byte* dataBuf, word32* pDataSz, word32 offset);
 
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Helper to get size of NV and read buffer without authentication. Typically used for reading a certificate from an NV.
@@ -2145,6 +2166,7 @@ WOLFTPM_API int wolfTPM2_NVReadCert(WOLFTPM2_DEV* dev, TPM_HANDLE handle,
     \sa wolfTPM2_NVCreateAuth
 */
 WOLFTPM_API int wolfTPM2_NVIncrement(WOLFTPM2_DEV* dev, WOLFTPM2_NV* nv);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -2166,6 +2188,7 @@ WOLFTPM_API int wolfTPM2_NVIncrement(WOLFTPM2_DEV* dev, WOLFTPM2_NV* nv);
 WOLFTPM_API int wolfTPM2_NVOpen(WOLFTPM2_DEV* dev, WOLFTPM2_NV* nv,
     word32 nvIndex, const byte* auth, word32 authSz);
 
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Lock writes on the specified NV Index
@@ -2220,6 +2243,7 @@ WOLFTPM_API int wolfTPM2_NVCreate(WOLFTPM2_DEV* dev, TPM_HANDLE authHandle,
 */
 WOLFTPM_API int wolfTPM2_NVWrite(WOLFTPM2_DEV* dev, TPM_HANDLE authHandle,
     word32 nvIndex, byte* dataBuf, word32 dataSz, word32 offset);
+#endif /* !HAVE_DO178 */
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Deprecated, use newer API
@@ -2257,6 +2281,7 @@ WOLFTPM_API int wolfTPM2_NVDelete(WOLFTPM2_DEV* dev, TPM_HANDLE authHandle,
 WOLFTPM_API int wolfTPM2_NVReadPublic(WOLFTPM2_DEV* dev, word32 nvIndex,
     TPMS_NV_PUBLIC* nvPublic);
 
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Helper function to store a TPM 2.0 Key into the TPM's NVRAM
@@ -2327,6 +2352,7 @@ WOLFTPM_API struct WC_RNG* wolfTPM2_GetRng(WOLFTPM2_DEV* dev);
     \sa wolfTPM2_GetRandom
 */
 WOLFTPM_API int wolfTPM2_GetRandom(WOLFTPM2_DEV* dev, byte* buf, word32 len);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -2342,7 +2368,7 @@ WOLFTPM_API int wolfTPM2_GetRandom(WOLFTPM2_DEV* dev, byte* buf, word32 len);
     \sa wolfTPM2_Clear
 */
 WOLFTPM_API int wolfTPM2_UnloadHandle(WOLFTPM2_DEV* dev, WOLFTPM2_HANDLE* handle);
-
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Deinitializes wolfTPM and wolfcrypt(if enabled)
@@ -2356,6 +2382,7 @@ WOLFTPM_API int wolfTPM2_UnloadHandle(WOLFTPM2_DEV* dev, WOLFTPM2_HANDLE* handle
     \sa wolfTPM2_Clear
 */
 WOLFTPM_API int wolfTPM2_Clear(WOLFTPM2_DEV* dev);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -2439,6 +2466,7 @@ WOLFTPM_API int wolfTPM2_HashFinish(WOLFTPM2_DEV* dev, WOLFTPM2_HASH* hash,
     \sa wolfTPM2_HmacUpdate
     \sa wolfTPM2_HmacFinish
 */
+#ifndef HAVE_DO178
 WOLFTPM_API int wolfTPM2_LoadKeyedHashKey(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
     WOLFTPM2_HANDLE* parent, int hashAlg, const byte* keyBuf, word32 keySz,
     const byte* usageAuth, word32 usageAuthSz);
@@ -2607,6 +2635,7 @@ WOLFTPM_API int wolfTPM2_SetCommand(WOLFTPM2_DEV* dev, TPM_CC commandCode,
     \sa wolfTPM2_Init
 */
 WOLFTPM_API int wolfTPM2_Shutdown(WOLFTPM2_DEV* dev, int doStartup);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -2625,6 +2654,7 @@ WOLFTPM_API int wolfTPM2_Shutdown(WOLFTPM2_DEV* dev, int doStartup);
 WOLFTPM_API int wolfTPM2_UnloadHandles(WOLFTPM2_DEV* dev, word32 handleStart,
     word32 handleCount);
 
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief One-shot API to unload all transient TPM handles
@@ -2791,6 +2821,7 @@ WOLFTPM_API int wolfTPM2_GetKeyTemplate_KeyedHash(TPMT_PUBLIC* publicTemplate,
     \sa wolfTPM2_GetKeyTemplate_KeySeal
 */
 WOLFTPM_API int wolfTPM2_GetKeyTemplate_KeySeal(TPMT_PUBLIC* publicTemplate, TPM_ALG_ID nameAlg);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -2814,6 +2845,7 @@ WOLFTPM_API int wolfTPM2_GetKeyTemplate_KeySeal(TPMT_PUBLIC* publicTemplate, TPM
 WOLFTPM_API int wolfTPM2_GetKeyTemplate_EK(TPMT_PUBLIC* publicTemplate, TPM_ALG_ID alg,
     int keyBits, TPM_ECC_CURVE curveID, TPM_ALG_ID nameAlg, int highRange);
 
+
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Helper to get the Endorsement public key template by NV index
@@ -2831,7 +2863,7 @@ WOLFTPM_API int wolfTPM2_GetKeyTemplate_EK(TPMT_PUBLIC* publicTemplate, TPM_ALG_
 */
 WOLFTPM_API int wolfTPM2_GetKeyTemplate_EKIndex(word32 nvIndex,
     TPMT_PUBLIC* publicTemplate);
-
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
     \brief Prepares a TPM public template for generating the TPM Endorsement Key of RSA type
@@ -3281,9 +3313,10 @@ WOLFTPM_API int wolfTPM2_CSR_Generate(WOLFTPM2_DEV* dev, WOLFTPM2_KEY* key,
 WOLFTPM_API int wolfTPM2_ChangePlatformAuth(WOLFTPM2_DEV* dev, WOLFTPM2_SESSION* session);
 
 
-
+#endif /* !HAVE_DO178 */
 /* moved to tpm.h native code. macros here for backwards compatibility */
 #define wolfTPM2_SetupPCRSel  TPM2_SetupPCRSel
+#ifndef HAVE_DO178
 #define wolfTPM2_GetAlgName   TPM2_GetAlgName
 #define wolfTPM2_GetRCString  TPM2_GetRCString
 #define wolfTPM2_GetCurveSize TPM2_GetCurveSize
@@ -3291,8 +3324,9 @@ WOLFTPM_API int wolfTPM2_ChangePlatformAuth(WOLFTPM2_DEV* dev, WOLFTPM2_SESSION*
 /* for encrypting secrets (like salt) used in auth sessions and external key import */
 WOLFTPM_LOCAL int wolfTPM2_EncryptSecret(WOLFTPM2_DEV* dev, const WOLFTPM2_KEY* tpmKey,
     TPM2B_DATA *secret, TPM2B_ENCRYPTED_SECRET *encSecret, const char* label);
+#endif /* !HAVE_DO178 */
 
-
+#ifndef HAVE_DO178
 #if defined(WOLFTPM_CRYPTOCB) || defined(HAVE_PK_CALLBACKS)
 struct TpmCryptoDevCtx;
 
@@ -3419,7 +3453,9 @@ WOLFTPM_API int wolfTPM_PK_SetCb(WOLFSSL_CTX* ctx);
 WOLFTPM_API int wolfTPM_PK_SetCbCtx(WOLFSSL* ssl, void* userCtx);
 
 #endif /* HAVE_PK_CALLBACKS */
+#endif /* !HAVE_DO178 */
 
+#ifndef HAVE_DO178
 #ifndef WOLFTPM2_NO_HEAP
 
 /*!
@@ -3726,6 +3762,7 @@ WOLFTPM_API int wolfTPM2_PolicyRestart(WOLFTPM2_DEV* dev, TPM_HANDLE sessionHand
 */
 WOLFTPM_API int wolfTPM2_GetPolicyDigest(WOLFTPM2_DEV* dev, TPM_HANDLE sessionHandle,
     byte* policyDigest, word32* policyDigestSz);
+#endif /* !HAVE_DO178 */
 
 /*!
     \ingroup wolfTPM2_Wrappers
@@ -3750,6 +3787,7 @@ WOLFTPM_API int wolfTPM2_GetPolicyDigest(WOLFTPM2_DEV* dev, TPM_HANDLE sessionHa
 WOLFTPM_API int wolfTPM2_PolicyPCR(WOLFTPM2_DEV* dev, TPM_HANDLE sessionHandle,
     TPM_ALG_ID pcrAlg, byte* pcrArray, word32 pcrArraySz);
 
+#ifndef HAVE_DO178
 /*!
     \ingroup wolfTPM2_Wrappers
 
@@ -3951,8 +3989,9 @@ WOLFTPM_API int wolfTPM2_PolicyAuthValue(WOLFTPM2_DEV* dev,
 */
 WOLFTPM_API int wolfTPM2_PolicyCommandCode(WOLFTPM2_DEV* dev,
     WOLFTPM2_SESSION* tpmSession, TPM_CC cc);
+#endif /* !HAVE_DO178 */
 
-
+#ifndef HAVE_DO178
 /* Pre-provisioned IAK and IDevID key/cert from TPM vendor */
 /* Tested with ST33KTPM devices */
 /* Default assumes: ECDSA SECP384R1, SHA2-384 */
@@ -3995,7 +4034,7 @@ WOLFTPM_API int wolfTPM2_SetIdentityAuth(WOLFTPM2_DEV* dev, WOLFTPM2_HANDLE* han
     uint8_t* masterPassword, uint16_t masterPasswordSz);
 
 #endif /* WOLFTPM_MFG_IDENTITY */
-
+#endif /* !HAVE_DO178 */
 
 /* Internal API's */
 /*!
@@ -4020,6 +4059,7 @@ WOLFTPM_LOCAL int GetKeyTemplateRSA(TPMT_PUBLIC* publicTemplate,
     TPM_ALG_ID nameAlg, TPMA_OBJECT objectAttributes, int keyBits, long exponent,
     TPM_ALG_ID sigScheme, TPM_ALG_ID sigHash);
 
+#ifndef HAVE_DO178
     /*!
     \ingroup wolfTPM2_Wrappers
     \brief Internal helper to create ECC key template
@@ -4040,8 +4080,9 @@ WOLFTPM_LOCAL int GetKeyTemplateRSA(TPMT_PUBLIC* publicTemplate,
 WOLFTPM_LOCAL int GetKeyTemplateECC(TPMT_PUBLIC* publicTemplate,
     TPM_ALG_ID nameAlg, TPMA_OBJECT objectAttributes, TPM_ECC_CURVE curve,
     TPM_ALG_ID sigScheme, TPM_ALG_ID sigHash);
+#endif /* !HAVE_DO178 */
 
-
+#ifndef HAVE_DO178
 #ifdef WOLFTPM_FIRMWARE_UPGRADE
 typedef int (*wolfTPM2FwDataCb)(
     uint8_t* data, uint32_t data_req_sz, uint32_t offset, void* cb_ctx);
@@ -4134,7 +4175,7 @@ WOLFTPM_API int wolfTPM2_FirmwareUpgradeRecover(WOLFTPM2_DEV* dev,
 WOLFTPM_API int wolfTPM2_FirmwareUpgradeCancel(WOLFTPM2_DEV* dev);
 
 #endif /* WOLFTPM_FIRMWARE_UPGRADE */
-
+#endif /* !HAVE_DO178 */
 
 #ifdef __cplusplus
     }  /* extern "C" */

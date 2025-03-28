@@ -176,7 +176,7 @@ int TPM2_ASN_DecodeX509Cert(uint8_t* input, int inputSz,
 
     if (rc >= 0) {
         /* check version == 1 */
-        if (input[idx] != TPM2_ASN_INTEGER || input[idx] != 1) {
+        if (input[idx] != TPM2_ASN_INTEGER && input[idx] != 1) {
             rc = TPM_RC_VALUE;
         }
     }
@@ -222,15 +222,17 @@ int TPM2_ASN_DecodeX509Cert(uint8_t* input, int inputSz,
 
     if (rc >= 0) {
         idx += len; /* skip subject */
-
-        /* Skip subject public key info */
+        /* subject public key info */
         rc = TPM2_ASN_GetHeader(input, TPM2_ASN_SEQUENCE | TPM2_ASN_CONSTRUCTED,
                                &idx, &len, inputSz);
     }
-
     if (rc >= 0) {
-        idx += len; /* skip subject public key info */
-
+        /* cert - subject public key alg oid */
+        rc = TPM2_ASN_GetHeader(input, TPM2_ASN_SEQUENCE | TPM2_ASN_CONSTRUCTED,
+                               &idx, &len, inputSz);
+    }
+    if (rc >= 0) {
+        idx += len; /* skip alg oid */
         /* Get public key */
         rc = TPM2_ASN_GetHeader(input, TPM2_ASN_BIT_STRING, &idx, &pubkey_len, inputSz);
     }
@@ -251,6 +253,7 @@ int TPM2_ASN_DecodeX509Cert(uint8_t* input, int inputSz,
     }
 
     if (rc >= 0) {
+        /* signature oid */
         rc = TPM2_ASN_GetHeader(input, TPM2_ASN_OBJECT_ID, &idx, &len, inputSz);
     }
 

@@ -112,9 +112,11 @@ typedef int64_t  INT64;
         #include <wolfssl/ssl.h> /* for wolfSSL_ERR_reason_error_string */
     #endif
 
+#ifndef HAVE_DO178
     #ifdef DEBUG_WOLFTPM
         #include <stdio.h>
     #endif
+#endif /* !HAVE_DO178 */
 
     #include <wolfssl/version.h>
     #if defined(LIBWOLFSSL_VERSION_HEX) && LIBWOLFSSL_VERSION_HEX < 0x03015004

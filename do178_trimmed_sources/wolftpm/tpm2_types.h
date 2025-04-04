@@ -37,12 +37,6 @@
     extern "C" {
 #endif
 
-#ifdef WOLFTPM_WINAPI
-    #ifdef _WIN32
-        #include <winsock2.h>
-    #endif
-    #include <windows.h>
-#endif
 
 /* ---------------------------------------------------------------------------*/
 /* TPM TYPES */
@@ -132,9 +126,8 @@ typedef int64_t  INT64;
     #endif
 #else
 
-    #include <stdio.h>
-    #include <stdlib.h>
     #include <string.h>
+
 
     #ifdef WOLFTPM_USER_SETTINGS
         #include "user_settings.h"

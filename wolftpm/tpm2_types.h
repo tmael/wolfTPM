@@ -37,12 +37,14 @@
     extern "C" {
 #endif
 
+#ifndef HAVE_DO178
 #ifdef WOLFTPM_WINAPI
     #ifdef _WIN32
         #include <winsock2.h>
     #endif
     #include <windows.h>
 #endif
+#endif /* !HAVE_DO178 */
 
 /* ---------------------------------------------------------------------------*/
 /* TPM TYPES */
@@ -140,9 +142,12 @@ typedef int64_t  INT64;
     #endif
 #else
 
+#ifndef HAVE_DO178
     #include <stdio.h>
     #include <stdlib.h>
+#endif /* !HAVE_DO178 */
     #include <string.h>
+
 
     #ifdef WOLFTPM_USER_SETTINGS
         #include "user_settings.h"
